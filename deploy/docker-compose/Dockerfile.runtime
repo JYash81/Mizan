@@ -1,0 +1,55 @@
+# ==============================================================================
+# Mizan Customer Runtime - Container Image
+# Multi-stage hardened build with non-root security context
+# ==============================================================================
+
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir uv && \
+    uv pip install --system --no-cache -r requirements.txt
+
+# ==============================================================================
+# Final Hardened Runtime Stage
+# ==============================================================================
+FROM python:3.12-slim AS runtime
+
+# Create dedicated non-root service user and group
+RUN groupadd -g 10001 mizan && \
+    useradd -u 10001 -g mizan -m -s /sbin/nologin mizan
+
+WORKDIR /app
+
+# Copy installed site-packages and binaries from builder
+COPY --from=builder /usr/local /usr/local
+
+# Copy backend application source
+COPY backend/app /app/app
+
+# Create dedicated persistent storage directories with strict non-root ownership
+RUN mkdir -p /var/lib/mizan/models /var/lib/mizan/data && \
+    chown -R mizan:mizan /app /var/lib/mizan
+
+# Switch to non-root user
+USER 10001:10001
+
+ENV PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1 \
+    PORT=8080 \
+    MIZAN_STORAGE_DIR=/var/lib/mizan/data \
+    MIZAN_MODEL_CACHE_DIR=/var/lib/mizan/models
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "from urllib.request import urlopen; urlopen('http://localhost:8080/api/v1/runtime/live', timeout=3)" || exit 1
+
+ENTRYPOINT ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

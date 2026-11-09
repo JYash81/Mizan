@@ -1,0 +1,47 @@
+# ==============================================================================
+# Mizan Site Agent - Container Image
+# Outbound-only management agent; zero exposed listening ports
+# ==============================================================================
+
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir uv && \
+    uv pip install --system --no-cache -r requirements.txt
+
+# ==============================================================================
+# Final Hardened Agent Stage
+# ==============================================================================
+FROM python:3.12-slim AS agent
+
+RUN groupadd -g 10001 mizan && \
+    useradd -u 10001 -g mizan -m -s /sbin/nologin mizan
+
+WORKDIR /app
+
+COPY --from=builder /usr/local /usr/local
+COPY backend/app /app/app
+
+# Shared directories
+RUN mkdir -p /var/lib/mizan/models /var/lib/mizan/data /var/lib/mizan/keys && \
+    chown -R mizan:mizan /app /var/lib/mizan
+
+USER 10001:10001
+
+ENV PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1 \
+    MIZAN_STORAGE_DIR=/var/lib/mizan/data \
+    MIZAN_MODEL_CACHE_DIR=/var/lib/mizan/models \
+    MIZAN_KEY_DIR=/var/lib/mizan/keys
+
+# Site Agent has NO EXPOSE directives; outbound connections only
+
+CMD ["python", "-m", "app.modules.runtime.site_agent_daemon"]

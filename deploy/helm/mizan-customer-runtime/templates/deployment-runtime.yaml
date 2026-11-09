@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-runtime
+  labels:
+    app.kubernetes.io/name: mizan-customer-runtime
+    app.kubernetes.io/component: runtime
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mizan-customer-runtime
+      app.kubernetes.io/component: runtime
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.runtime.port }}"
+        prometheus.io/path: "/api/v1/ops/metrics/prometheus"
+      labels:
+        app.kubernetes.io/name: mizan-customer-runtime
+        app.kubernetes.io/component: runtime
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name | default "mizan-customer-runtime-sa" }}
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+      containers:
+        - name: runtime
+          image: "{{ .Values.runtime.image.repository }}:{{ .Values.runtime.image.tag }}"
+          imagePullPolicy: {{ .Values.runtime.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            capabilities:
+              drop:
+                {{- toYaml .Values.securityContext.capabilities.drop | nindent 16 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.runtime.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+          startupProbe:
+            httpGet:
+              path: {{ .Values.runtime.probes.startup.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.runtime.probes.startup.initialDelaySeconds }}
+            periodSeconds: {{ .Values.runtime.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.runtime.probes.startup.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.runtime.probes.liveness.path }}
+              port: http
+            periodSeconds: {{ .Values.runtime.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.runtime.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.runtime.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.runtime.probes.readiness.path }}
+              port: http
+            periodSeconds: {{ .Values.runtime.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.runtime.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.runtime.probes.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.runtime.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: model-storage
+              mountPath: /var/lib/mizan/models
+            - name: runtime-data
+              mountPath: /var/lib/mizan/data
+            {{- end }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-model-storage
+        - name: runtime-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-runtime-data
+        {{- else }}
+        - name: model-storage
+          emptyDir: {}
+        - name: runtime-data
+          emptyDir: {}
+        {{- end }}

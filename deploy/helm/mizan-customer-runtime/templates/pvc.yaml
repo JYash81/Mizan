@@ -1,0 +1,35 @@
+{{- if .Values.persistence.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-model-storage
+  labels:
+    app.kubernetes.io/name: mizan-customer-runtime
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.modelStorage.accessMode }}
+  {{- if .Values.persistence.modelStorage.storageClassName }}
+  storageClassName: {{ .Values.persistence.modelStorage.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.modelStorage.size }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-runtime-data
+  labels:
+    app.kubernetes.io/name: mizan-customer-runtime
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.runtimeData.accessMode }}
+  {{- if .Values.persistence.runtimeData.storageClassName }}
+  storageClassName: {{ .Values.persistence.runtimeData.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.runtimeData.size }}
+{{- end }}

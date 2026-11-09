@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    app.kubernetes.io/name: mizan-customer-runtime
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  PORT: "{{ .Values.runtime.port }}"
+  MIZAN_STORAGE_DIR: "/var/lib/mizan/data"
+  MIZAN_MODEL_CACHE_DIR: "/var/lib/mizan/models"
+  MIZAN_OFFLINE_MODE: "{{ .Values.config.offlineMode }}"
+  MIZAN_CONTROL_PLANE_URL: "{{ .Values.config.controlPlaneUrl }}"
+  MIZAN_CUSTOMER_SITE_ID: "{{ .Values.config.siteId }}"
+  MIZAN_POLL_INTERVAL_SECONDS: "{{ .Values.siteAgent.pollIntervalSeconds }}"

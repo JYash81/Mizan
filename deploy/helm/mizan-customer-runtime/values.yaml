@@ -1,0 +1,95 @@
+# Default values for mizan-customer-runtime.
+# Hardened non-root offline deployment configuration
+
+replicaCount: 1
+
+runtime:
+  image:
+    repository: mizan/customer-runtime
+    pullPolicy: IfNotPresent
+    tag: "1.0.0"
+  port: 8080
+  resources:
+    limits:
+      cpu: "4000m"
+      memory: "16Gi"
+    requests:
+      cpu: "1000m"
+      memory: "4Gi"
+  probes:
+    startup:
+      path: /api/v1/runtime/live
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      failureThreshold: 30
+    liveness:
+      path: /api/v1/runtime/live
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      path: /api/v1/runtime/ready
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+siteAgent:
+  enabled: true
+  image:
+    repository: mizan/site-agent
+    pullPolicy: IfNotPresent
+    tag: "1.0.0"
+  pollIntervalSeconds: 30
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+serviceAccount:
+  create: true
+  name: "mizan-customer-runtime-sa"
+
+securityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  runAsNonRoot: true
+  fsGroup: 10001
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+persistence:
+  enabled: true
+  modelStorage:
+    storageClassName: ""
+    accessMode: ReadWriteOnce
+    size: 50Gi
+  runtimeData:
+    storageClassName: ""
+    accessMode: ReadWriteOnce
+    size: 20Gi
+
+config:
+  controlPlaneUrl: "https://controlplane.mizan.corp.local"
+  siteId: ""
+  offlineMode: true
+
+secrets:
+  agentKeyId: "agent-key-01"
+  enrollmentToken: ""
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+    interval: 15s
+    labels: {}

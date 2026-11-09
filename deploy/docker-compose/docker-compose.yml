@@ -1,0 +1,102 @@
+# ==============================================================================
+# Mizan Customer Runtime & Site Agent - Docker Compose Package
+# Multi-container offline runtime with isolated persistent storage volumes
+# ==============================================================================
+
+version: "3.8"
+
+services:
+  mizan-customer-runtime:
+    build:
+      context: ../..
+      dockerfile: deploy/docker-compose/Dockerfile.runtime
+    container_name: mizan-customer-runtime
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - MIZAN_STORAGE_DIR=/var/lib/mizan/data
+      - MIZAN_MODEL_CACHE_DIR=/var/lib/mizan/models
+      - MIZAN_OFFLINE_MODE=true
+    volumes:
+      - mizan-model-storage:/var/lib/mizan/models
+      - mizan-runtime-data:/var/lib/mizan/data
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    user: "10001:10001"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"from urllib.request import urlopen; urlopen('http://localhost:8080/api/v1/runtime/live', timeout=3)\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mizan-internal
+
+  mizan-site-agent:
+    build:
+      context: ../..
+      dockerfile: deploy/docker-compose/Dockerfile.agent
+    container_name: mizan-site-agent
+    restart: unless-stopped
+    environment:
+      - MIZAN_CONTROL_PLANE_URL=${MIZAN_CONTROL_PLANE_URL:-http://controlplane.mizan.local:8000}
+      - MIZAN_CUSTOMER_SITE_ID=${MIZAN_CUSTOMER_SITE_ID}
+      - MIZAN_SITE_AGENT_ID=${MIZAN_SITE_AGENT_ID}
+      - MIZAN_SITE_AGENT_KEY_ID=${MIZAN_SITE_AGENT_KEY_ID:-agent-key-01}
+      - MIZAN_POLL_INTERVAL_SECONDS=${MIZAN_POLL_INTERVAL_SECONDS:-30}
+      - MIZAN_STORAGE_DIR=/var/lib/mizan/data
+      - MIZAN_MODEL_CACHE_DIR=/var/lib/mizan/models
+    volumes:
+      - mizan-model-storage:/var/lib/mizan/models
+      - mizan-runtime-data:/var/lib/mizan/data
+    security_opt:
+      - no-new-privileges:true
+    user: "10001:10001"
+    depends_on:
+      mizan-customer-runtime:
+        condition: service_healthy
+    networks:
+      - mizan-internal
+
+  # Optional local OSS monitoring profile (Zero external SaaS dependency)
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: mizan-prometheus
+    restart: unless-stopped
+    profiles:
+      - monitoring
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - mizan-internal
+
+  grafana:
+    image: grafana/grafana-oss:10.4.0
+    container_name: mizan-grafana
+    restart: unless-stopped
+    profiles:
+      - monitoring
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - mizan-internal
+
+networks:
+  mizan-internal:
+    driver: bridge
+
+volumes:
+  mizan-model-storage:
+    name: mizan-model-storage
+    driver: local
+  mizan-runtime-data:
+    name: mizan-runtime-data
+    driver: local

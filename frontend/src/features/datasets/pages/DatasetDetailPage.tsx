@@ -38,7 +38,7 @@ export function DatasetDetailPage() {
   // 1. Fetch Dataset detail
   const { data: datasetData, isLoading: loadingDataset } = useQuery<{ dataset: Dataset }>({
     queryKey: ["dataset", workspaceId, datasetId],
-    queryFn: () => apiGet<{ dataset: Dataset }>(`/api/v1/workspaces/${workspaceId}/datasets/${datasetId}`),
+    queryFn: () => apiGet<{ dataset: Dataset }>(`/workspaces/${workspaceId}/datasets/${datasetId}`),
     enabled: !!workspaceId && !!datasetId,
   });
 
@@ -47,7 +47,7 @@ export function DatasetDetailPage() {
     queryKey: ["dataset_versions", workspaceId, datasetId],
     queryFn: () =>
       apiGet<{ versions: DatasetVersion[] }>(
-        `/api/v1/workspaces/${workspaceId}/datasets/${datasetId}/versions`
+        `/workspaces/${workspaceId}/datasets/${datasetId}/versions`
       ),
     enabled: !!workspaceId && !!datasetId,
   });
@@ -66,7 +66,7 @@ export function DatasetDetailPage() {
     queryKey: ["documents", workspaceId, datasetId, currentVersionId],
     queryFn: () =>
       apiGet<{ documents: Document[] }>(
-        `/api/v1/workspaces/${workspaceId}/datasets/${datasetId}/versions/${currentVersionId}/documents`
+        `/workspaces/${workspaceId}/datasets/${datasetId}/versions/${currentVersionId}/documents`
       ),
     enabled: !!workspaceId && !!datasetId && !!currentVersionId,
   });
@@ -75,7 +75,7 @@ export function DatasetDetailPage() {
   const createVersionMutation = useMutation({
     mutationFn: (payload: CreateVersionPayload) =>
       apiPost<{ version: DatasetVersion }>(
-        `/api/v1/workspaces/${workspaceId}/datasets/${datasetId}/versions`,
+        `/workspaces/${workspaceId}/datasets/${datasetId}/versions`,
         payload
       ),
     onSuccess: (res) => {
@@ -94,7 +94,7 @@ export function DatasetDetailPage() {
   const finalizeVersionMutation = useMutation({
     mutationFn: () =>
       apiPost<{ version: DatasetVersion }>(
-        `/api/v1/workspaces/${workspaceId}/datasets/${datasetId}/versions/${currentVersionId}/finalize`
+        `/workspaces/${workspaceId}/datasets/${datasetId}/versions/${currentVersionId}/finalize`
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dataset_versions", workspaceId, datasetId] });
@@ -108,7 +108,7 @@ export function DatasetDetailPage() {
 
   const deleteDocMutation = useMutation({
     mutationFn: (docId: string) =>
-      apiDelete(`/api/v1/workspaces/${workspaceId}/documents/${docId}`),
+      apiDelete(`/workspaces/${workspaceId}/documents/${docId}`),
     onSuccess: () => {
       refetchDocs();
       queryClient.invalidateQueries({ queryKey: ["dataset_versions", workspaceId, datasetId] });
@@ -117,7 +117,7 @@ export function DatasetDetailPage() {
 
   const reprocessDocMutation = useMutation({
     mutationFn: (docId: string) =>
-      apiPost(`/api/v1/workspaces/${workspaceId}/documents/${docId}/reprocess`),
+      apiPost(`/workspaces/${workspaceId}/documents/${docId}/reprocess`),
     onSuccess: () => {
       refetchDocs();
     },

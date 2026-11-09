@@ -47,13 +47,13 @@ export function DatasetsPage() {
 
   const { data, isLoading, error } = useQuery<{ datasets: Dataset[] }>({
     queryKey: ["datasets", workspaceId],
-    queryFn: () => apiGet<{ datasets: Dataset[] }>(`/api/v1/workspaces/${workspaceId}/datasets`),
+    queryFn: () => apiGet<{ datasets: Dataset[] }>(`/workspaces/${workspaceId}/datasets`),
     enabled: !!workspaceId,
   });
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateDatasetPayload) =>
-      apiPost<{ dataset: Dataset }>(`/api/v1/workspaces/${workspaceId}/datasets`, payload),
+      apiPost<{ dataset: Dataset }>(`/workspaces/${workspaceId}/datasets`, payload),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["datasets", workspaceId] });
       setShowCreateModal(false);
@@ -72,7 +72,7 @@ export function DatasetsPage() {
 
   const archiveMutation = useMutation({
     mutationFn: (datasetId: string) =>
-      apiDelete(`/api/v1/workspaces/${workspaceId}/datasets/${datasetId}`),
+      apiDelete(`/workspaces/${workspaceId}/datasets/${datasetId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["datasets", workspaceId] });
     },

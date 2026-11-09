@@ -59,9 +59,26 @@ export class ApiError extends Error {
   }
 }
 
+export function buildApiUrl(path: string): string {
+  let base = getBaseUrl().replace(/\/+$/, "");
+  if (!base.endsWith("/api/v1")) {
+    base = `${base}/api/v1`;
+  }
+  let cleanPath = path.trim();
+  if (cleanPath.startsWith("/api/v1/")) {
+    cleanPath = cleanPath.slice(7);
+  } else if (cleanPath === "/api/v1") {
+    cleanPath = "";
+  }
+  if (!cleanPath.startsWith("/") && cleanPath.length > 0) {
+    cleanPath = `/${cleanPath}`;
+  }
+  return `${base}${cleanPath}`;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 10000);
+  const timeout = window.setTimeout(() => controller.abort(), 30000);
 
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) {
@@ -82,7 +99,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   try {
-    const response = await fetch(`${getBaseUrl()}${path}`, {
+    const fullUrl = buildApiUrl(path);
+    const response = await fetch(fullUrl, {
       ...init,
       headers,
       credentials: "include",

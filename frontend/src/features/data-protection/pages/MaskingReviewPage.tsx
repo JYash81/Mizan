@@ -41,7 +41,7 @@ export function MaskingReviewPage() {
   const { data: run, isLoading: runLoading } = useQuery<MaskingRun>({
     queryKey: ["masking-run", workspaceId, runId],
     queryFn: () =>
-      apiGet<MaskingRun>(`/api/v1/workspaces/${workspaceId}/masking-runs/${runId}`),
+      apiGet<MaskingRun>(`/workspaces/${workspaceId}/masking-runs/${runId}`),
     enabled: !!workspaceId && !!runId,
   });
 
@@ -50,7 +50,7 @@ export function MaskingReviewPage() {
     queryKey: ["masking-findings", workspaceId, runId],
     queryFn: () =>
       apiGet<PiiFinding[]>(
-        `/api/v1/workspaces/${workspaceId}/masking-runs/${runId}/findings`
+        `/workspaces/${workspaceId}/masking-runs/${runId}/findings`
       ),
     enabled: !!workspaceId && !!runId,
   });
@@ -59,7 +59,7 @@ export function MaskingReviewPage() {
   const { data: approvals = [] } = useQuery<Gate1Approval[]>({
     queryKey: ["gate1-approvals", workspaceId],
     queryFn: () =>
-      apiGet<Gate1Approval[]>(`/api/v1/workspaces/${workspaceId}/gate1/approvals`),
+      apiGet<Gate1Approval[]>(`/workspaces/${workspaceId}/gate1/approvals`),
     enabled: !!workspaceId,
   });
 
@@ -74,7 +74,7 @@ export function MaskingReviewPage() {
     queryKey: ["document-review", workspaceId, runId, currentDocId],
     queryFn: () =>
       apiGet<DocumentReview>(
-        `/api/v1/workspaces/${workspaceId}/masking-runs/${runId}/documents/${currentDocId}/review`
+        `/workspaces/${workspaceId}/masking-runs/${runId}/documents/${currentDocId}/review`
       ),
     enabled: !!workspaceId && !!runId && !!currentDocId,
   });
@@ -89,7 +89,7 @@ export function MaskingReviewPage() {
       decisionType: string;
     }) =>
       apiPost(
-        `/api/v1/workspaces/${workspaceId}/masking-runs/${runId}/findings/${findingId}/decisions`,
+        `/workspaces/${workspaceId}/masking-runs/${runId}/findings/${findingId}/decisions`,
         { decision_type: decisionType }
       ),
     onSuccess: () => {
@@ -110,7 +110,7 @@ export function MaskingReviewPage() {
       end_offset: number;
     }) =>
       apiPost(
-        `/api/v1/workspaces/${workspaceId}/masking-runs/${runId}/findings/manual`,
+        `/workspaces/${workspaceId}/masking-runs/${runId}/findings/manual`,
         payload
       ),
     onSuccess: () => {
@@ -129,7 +129,7 @@ export function MaskingReviewPage() {
   const approveMutation = useMutation({
     mutationFn: (payload: { decision_reason: string; override_coverage_reason?: string }) =>
       apiPost(
-        `/api/v1/workspaces/${workspaceId}/masking-runs/${runId}/gate1/approve`,
+        `/workspaces/${workspaceId}/masking-runs/${runId}/gate1/approve`,
         payload
       ),
     onSuccess: () => {
@@ -142,7 +142,7 @@ export function MaskingReviewPage() {
   const rejectMutation = useMutation({
     mutationFn: (payload: { decision_reason: string }) =>
       apiPost(
-        `/api/v1/workspaces/${workspaceId}/masking-runs/${runId}/gate1/reject`,
+        `/workspaces/${workspaceId}/masking-runs/${runId}/gate1/reject`,
         payload
       ),
     onSuccess: () => {
@@ -156,7 +156,7 @@ export function MaskingReviewPage() {
   const verifyMutation = useMutation({
     mutationFn: (approvalId: string) =>
       apiPost<Gate1Verification>(
-        `/api/v1/workspaces/${workspaceId}/gate1/approvals/${approvalId}/verify`,
+        `/workspaces/${workspaceId}/gate1/approvals/${approvalId}/verify`,
         {}
       ),
     onSuccess: (data) => {

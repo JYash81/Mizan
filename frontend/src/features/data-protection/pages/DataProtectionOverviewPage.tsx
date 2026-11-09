@@ -29,14 +29,14 @@ export function DataProtectionOverviewPage() {
   const { data: runs = [], isLoading: runsLoading } = useQuery<MaskingRun[]>({
     queryKey: ["masking-runs", workspaceId],
     queryFn: () =>
-      apiGet<MaskingRun[]>(`/api/v1/workspaces/${workspaceId}/masking-runs`),
+      apiGet<MaskingRun[]>(`/workspaces/${workspaceId}/masking-runs`),
     enabled: !!workspaceId,
   });
 
   const { data: approvals = [] } = useQuery<Gate1Approval[]>({
     queryKey: ["gate1-approvals", workspaceId],
     queryFn: () =>
-      apiGet<Gate1Approval[]>(`/api/v1/workspaces/${workspaceId}/gate1/approvals`),
+      apiGet<Gate1Approval[]>(`/workspaces/${workspaceId}/gate1/approvals`),
     enabled: !!workspaceId,
   });
 

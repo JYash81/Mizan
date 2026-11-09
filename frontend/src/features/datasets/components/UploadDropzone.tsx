@@ -104,7 +104,7 @@ export function UploadDropzone({
 
       try {
         await apiUpload(
-          `/api/v1/workspaces/${workspaceId}/datasets/${datasetId}/versions/${versionId}/documents/upload`,
+          `/workspaces/${workspaceId}/datasets/${datasetId}/versions/${versionId}/documents/upload`,
           formData
         );
         successCount++;

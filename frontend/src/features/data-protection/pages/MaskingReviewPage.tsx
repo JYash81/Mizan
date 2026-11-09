@@ -166,8 +166,9 @@ export function MaskingReviewPage() {
 
   if (runLoading || !run) {
     return (
-      <div className="p-12 text-center text-slate-400 text-sm">
-        Loading masking review workspace...
+      <div className="max-w-7xl mx-auto p-12 my-6 bg-slate-900 text-slate-200 rounded-2xl border border-slate-800 shadow-xl text-center space-y-3">
+        <RefreshCw className="w-6 h-6 animate-spin mx-auto text-emerald-400" />
+        <p className="text-sm font-medium">Loading masking review workspace...</p>
       </div>
     );
   }
@@ -175,7 +176,7 @@ export function MaskingReviewPage() {
   const currentFindings = findings.filter((f) => f.document_id === currentDocId);
 
   return (
-    <div className="space-y-6 text-slate-100">
+    <div className="space-y-6 max-w-7xl mx-auto p-6 sm:p-8 my-6 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-xl">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>

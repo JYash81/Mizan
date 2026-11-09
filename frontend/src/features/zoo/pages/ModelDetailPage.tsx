@@ -55,12 +55,12 @@ export function ModelDetailPage() {
   };
 
   if (detailQuery.isLoading) {
-    return <div className="p-12 text-center text-xs text-muted-foreground">Loading release details...</div>;
+    return <div className="max-w-7xl mx-auto p-12 text-center text-sm text-muted-foreground">Loading release details...</div>;
   }
 
   if (detailQuery.isError || !detail) {
     return (
-      <div className="p-8 text-center text-xs text-destructive border rounded-lg bg-destructive/5">
+      <div className="max-w-7xl mx-auto p-8 my-6 text-center text-xs text-destructive border rounded-xl bg-destructive/5">
         Failed to load model release details. It may be private or unapproved.
       </div>
     );
@@ -70,7 +70,7 @@ export function ModelDetailPage() {
   const isDownloadable = listing.distribution_status === "DOWNLOADABLE";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-6 sm:p-8">
       {/* Top back link */}
       <div>
         <Link

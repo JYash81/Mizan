@@ -79,8 +79,10 @@ export const RecommendationOverviewPage: React.FC = () => {
 
   if (!workspaceId) {
     return (
-      <div className="p-8 text-center text-neutral-400">
-        Please select an active workspace to view the Recommendation Centre.
+      <div className="max-w-7xl mx-auto p-12 my-6 bg-slate-900 text-slate-200 rounded-2xl border border-slate-800 shadow-xl text-center space-y-3">
+        <Sparkles className="w-10 h-10 mx-auto text-emerald-400" />
+        <h2 className="text-lg font-semibold text-slate-100">No Workspace Selected</h2>
+        <p className="text-xs text-slate-400">Please select an active workspace to view the Recommendation Centre.</p>
       </div>
     );
   }
@@ -90,7 +92,7 @@ export const RecommendationOverviewPage: React.FC = () => {
   const totalFrontierCandidates = runs.reduce((acc, r) => acc + r.frontier_candidates, 0);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-6 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-xl my-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-5">
         <div>

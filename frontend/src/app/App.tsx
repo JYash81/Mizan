@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
   Archive,
+  ArrowRight,
   Award,
   Bell,
   Boxes,
@@ -18,6 +19,7 @@ import {
   PackageCheck,
   Plus,
   Radio,
+  RefreshCw,
   Server,
   Settings,
   ShieldCheck,
@@ -25,6 +27,7 @@ import {
   Users,
 } from "lucide-react";
 import {
+  Link,
   Navigate,
   NavLink,
   Route,
@@ -43,6 +46,10 @@ import { SettingsSecurityPage } from "../features/auth/pages/SettingsSecurityPag
 import { VerifyEmailPage } from "../features/auth/pages/VerifyEmailPage";
 import { OnboardingPage } from "../features/workspaces/pages/OnboardingPage";
 import { TeamManagementPage } from "../features/workspaces/pages/TeamManagementPage";
+
+const WorkspacesPage = lazy(() =>
+  import("../features/workspaces/pages/WorkspacesPage").then((m) => ({ default: m.WorkspacesPage }))
+);
 
 const DatasetsPage = lazy(() =>
   import("../features/datasets/pages/DatasetsPage").then((m) => ({ default: m.DatasetsPage }))
@@ -225,6 +232,13 @@ function Shell({ children }: { children: ReactNode }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const navigate = useNavigate();
 
+  const healthQuery = useQuery({
+    queryKey: ["backend-health-ping"],
+    queryFn: () => apiGet<{ status: string }>("/health"),
+    refetchInterval: 30000,
+    retry: 3,
+  });
+
   const userInitials =
     user?.full_name
       .split(" ")
@@ -241,7 +255,7 @@ function Shell({ children }: { children: ReactNode }) {
           <span>Mizan</span>
         </div>
 
-        <nav aria-label="Main navigation">
+        <nav aria-label="Main navigation" className="sidebar-scroll">
           {nav.map(({ label, path, icon: Icon }) => (
             <NavLink
               key={path}
@@ -265,11 +279,45 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main>
+      <main className="flex-1 min-w-0 bg-slate-50">
         <header>
-          <div>
-            <p className="eyebrow">{activeOrganization?.name ?? "CONTROL PLANE"}</p>
-            <h1>{activeWorkspace?.name ?? "Mizan workspace"}</h1>
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold text-emerald-600 tracking-wider uppercase">
+              {activeOrganization?.name ?? "ORGANIZATION"}
+            </span>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-base font-bold text-slate-900 tracking-tight">
+                {activeWorkspace?.name ?? "Default Workspace"}
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                ACTIVE
+              </span>
+              {healthQuery.isLoading ? (
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 animate-pulse"
+                  title="Connecting to cloud backend on Render.com..."
+                >
+                  <RefreshCw size={9} className="animate-spin text-amber-600" />
+                  API CONNECTING
+                </span>
+              ) : healthQuery.isSuccess ? (
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1"
+                  title="Cloud API backend is live and healthy"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  CLOUD API LIVE
+                </span>
+              ) : (
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1"
+                  title="API service cold start in progress or network offline"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  RECONNECTING
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="header-actions">
@@ -279,8 +327,9 @@ function Shell({ children }: { children: ReactNode }) {
                 className="workspace"
                 onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
               >
-                <span>{activeWorkspace?.name ?? "Select workspace"}</span>
-                <ChevronDown size={16} />
+                <FolderKanban size={15} className="text-emerald-600 shrink-0" />
+                <span className="max-w-[160px] truncate">{activeWorkspace?.name ?? "Select workspace"}</span>
+                <ChevronDown size={14} className="text-slate-400" />
               </button>
 
               {showWorkspaceMenu && (
@@ -335,8 +384,9 @@ function Shell({ children }: { children: ReactNode }) {
               )}
             </div>
 
-            <button className="icon-button" aria-label="Notifications">
+            <button className="icon-button relative" aria-label="Notifications" title="No unread notifications">
               <Bell size={18} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
             </button>
 
             {/* User Profile Menu */}
@@ -387,7 +437,21 @@ function Shell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        {children}
+        <Suspense
+          fallback={
+            <div className="max-w-7xl mx-auto p-8 space-y-6 animate-pulse">
+              <div className="h-8 bg-slate-200 rounded w-1/4" />
+              <div className="h-4 bg-slate-200 rounded w-1/2" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                <div className="h-32 bg-slate-200 rounded-xl" />
+                <div className="h-32 bg-slate-200 rounded-xl" />
+                <div className="h-32 bg-slate-200 rounded-xl" />
+              </div>
+            </div>
+          }
+        >
+          {children}
+        </Suspense>
       </main>
     </div>
   );
@@ -402,25 +466,25 @@ function Dashboard() {
 
   return (
     <Shell>
-      <section className="hero">
+      <div className="page-container space-y-8 pb-16">
+        <section className="hero">
         <div>
           <p className="eyebrow">
-            {activeOrganization?.name ? `${activeOrganization.name} · ${activeWorkspace?.name ?? "WORKSPACE"}` : "FOUNDATION MILESTONE"}
+            {activeOrganization?.name ? `${activeOrganization.name} · ${activeWorkspace?.name ?? "WORKSPACE"}` : "ENTERPRISE PLATFORM"}
           </p>
-          <h2>Prepare a governed path to better AI.</h2>
+          <h2>Governed AI Experimentation & Evaluation</h2>
           <p>
-            Set up workspaces, prepare masked data, and approve experimentation before Mizan runs
-            it.
+            Deterministic evaluation suites, automated PII masking, local and cloud model training, hardware pricing, and cryptographic release approvals.
           </p>
         </div>
         <div className="api-state">
           <span className={`status-dot ${version.isSuccess ? "online" : ""}`} />
           <div>
-            <strong>{version.isSuccess ? "API connected" : "Checking API"}</strong>
+            <strong>{version.isSuccess ? "API Connected" : "Connecting..."}</strong>
             <small>
               {version.isSuccess
                 ? `${version.data.name} ${version.data.version} · ${version.data.environment}`
-                : "Start the local FastAPI service to connect."}
+                : "FastAPI Cloud Backend"}
             </small>
           </div>
         </div>
@@ -428,64 +492,88 @@ function Dashboard() {
 
       <section className="section-heading">
         <div>
-          <h2>Your platform, ready for setup</h2>
-          <p>There is no business data yet. Start with the controlled foundations below.</p>
+          <h2>Core Experimentation Pillars</h2>
+          <p>End-to-end governed pipeline from raw business datasets to deployed AI artifacts.</p>
         </div>
       </section>
 
       <div className="overview-grid">
         <Foundation
-          title="Workspaces"
+          title="Workspaces & Governance"
           icon={<FolderKanban />}
-          description="Create a governed business workspace before team members and data are added."
+          description="Isolated business scopes, role-based access control, and team permissions."
           state="Active & Governed"
+          to="/workspaces"
         />
         <Foundation
-          title="Datasets"
+          title="Business Datasets"
           icon={<Database />}
-          description="Bring in documents only after the secure upload and masking workflow is available."
-          state="Scheduled for Milestone 3"
+          description="Document ingestion, chunking, and automated Gate 1 PII masking verification."
+          state="Data Plane Active"
+          to="/datasets"
         />
         <Foundation
-          title="Experiments"
+          title="Experimentation Lab"
           icon={<FlaskConical />}
-          description="Plan trials and compare results after masked data has passed human approval."
-          state="Scheduled for Milestone 7"
+          description="Design trial matrices, configure hyper-parameters, and evaluate models."
+          state="Trials Active"
+          to="/experiments"
+        />
+        <Foundation
+          title="Model Evaluations"
+          icon={<Award />}
+          description="Deterministic multi-engine evaluation suites with automated pass/fail scoring."
+          state="Multi-Engine Ready"
+          to="/evaluation"
+        />
+        <Foundation
+          title="Hardware & Cost Center"
+          icon={<Cpu />}
+          description="VRAM memory estimators, quantization benchmarks, and Gate 2 budget approvals."
+          state="Deterministic Estimators"
+          to="/hardware"
+        />
+        <Foundation
+          title="Model & App Zoo"
+          icon={<Boxes />}
+          description="Approved model weights, adapters, and production app catalog with Gate 3 signing."
+          state="Catalog Ready"
+          to="/zoo/models"
         />
       </div>
 
       <section className="panel">
         <div>
-          <h2>Approval gates</h2>
+          <h2>Three-Gate Governance Pipeline</h2>
           <p>
-            Human oversight is designed into every decision that can expose data, spend budget, or
-            publish a release.
+            Human oversight is enforced at critical boundaries before data is exposed, compute is provisioned, or releases are deployed.
           </p>
         </div>
         <ol className="gates">
           <li>
             <b>01</b>
             <span>
-              <strong>Masked data approval</strong>
-              <small>Before an experiment package can leave protected storage.</small>
+              <strong>Gate 1: Data Protection & Masking Approval</strong>
+              <small>Ensures PII/PHI is masked and audited before documents enter training or evaluation.</small>
             </span>
           </li>
           <li>
             <b>02</b>
             <span>
-              <strong>Spend approval</strong>
-              <small>Before paid compute or provider resources are used.</small>
+              <strong>Gate 2: Hardware & Compute Spend Approval</strong>
+              <small>Enforces financial budget limits and preflights resource requirements before cloud compute runs.</small>
             </span>
           </li>
           <li>
             <b>03</b>
             <span>
-              <strong>Release approval</strong>
-              <small>Before an artifact can enter the Model and App Zoo.</small>
+              <strong>Gate 3: Artifact Release & Cryptographic Signing</strong>
+              <small>Ed25519 signs model weights, evaluation reports, and manifests before catalog publishing.</small>
             </span>
           </li>
         </ol>
       </section>
+      </div>
     </Shell>
   );
 }
@@ -495,19 +583,32 @@ function Foundation({
   description,
   state,
   icon,
+  to,
 }: {
   title: string;
   description: string;
   state: string;
   icon: ReactNode;
+  to?: string;
 }) {
-  return (
-    <article className="feature-card">
-      <div className="feature-icon">{icon}</div>
-      <h3>{title}</h3>
+  const card = (
+    <article className="feature-card group cursor-pointer hover:border-emerald-500 hover:shadow-md transition-all">
+      <div className="feature-icon group-hover:bg-emerald-100 transition-colors">{icon}</div>
+      <h3 className="group-hover:text-emerald-700 transition-colors">{title}</h3>
       <p>{description}</p>
-      <span className="planned">{state}</span>
+      <div className="mt-auto pt-3 flex items-center justify-between w-full">
+        <span className="planned">{state}</span>
+        {to && <ArrowRight size={14} className="text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />}
+      </div>
     </article>
+  );
+
+  return to ? (
+    <Link to={to} className="no-underline text-inherit block">
+      {card}
+    </Link>
+  ) : (
+    card
   );
 }
 
@@ -535,8 +636,11 @@ export function App() {
       <AuthProvider>
         <Suspense
           fallback={
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center text-xs text-slate-400">
-              Loading Mizan module...
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center text-sm font-medium text-slate-600">
+              <div className="text-center space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center mx-auto shadow-md animate-pulse">M</div>
+                <p>Loading Mizan platform...</p>
+              </div>
             </div>
           }
         >
@@ -571,6 +675,16 @@ export function App() {
               <ProtectedRoute>
                 <Shell>
                   <TeamManagementPage />
+                </Shell>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/workspaces"
+            element={
+              <ProtectedRoute>
+                <Shell>
+                  <WorkspacesPage />
                 </Shell>
               </ProtectedRoute>
             }
@@ -971,6 +1085,7 @@ export function App() {
                 ![
                   "/",
                   "/team",
+                  "/workspaces",
                   "/settings",
                   "/datasets",
                   "/approvals",

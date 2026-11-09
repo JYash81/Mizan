@@ -58,7 +58,7 @@ export const ModelBuildingOverviewPage: React.FC = () => {
   const stagedArtifactsCount = runs.reduce((acc, r) => acc + (r.staged_artifacts?.length || 0), 0);
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-6 sm:p-8 my-6 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-xl">
       {/* Page Title & Top Actions */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>

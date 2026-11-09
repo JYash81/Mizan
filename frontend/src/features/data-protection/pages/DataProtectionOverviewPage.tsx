@@ -55,7 +55,7 @@ export function DataProtectionOverviewPage() {
   );
 
   return (
-    <div className="space-y-6 text-slate-100">
+    <div className="space-y-6 max-w-7xl mx-auto p-6 sm:p-8 my-6 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-xl">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>

@@ -238,19 +238,23 @@ export function EvaluationSuiteDetailPage() {
   const latestVersion = versions.length > 0 ? versions[0] : null;
 
   if (suiteLoading) {
-    return <div className="py-12 text-center text-sm text-muted-foreground">Loading evaluation suite...</div>;
+    return (
+      <div className="max-w-7xl mx-auto p-12 text-center text-sm text-muted-foreground">
+        Loading evaluation suite...
+      </div>
+    );
   }
 
   if (!suite) {
     return (
-      <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-6 text-center text-destructive">
+      <div className="max-w-7xl mx-auto p-8 my-6 rounded-xl border border-destructive/50 bg-destructive/10 text-center text-destructive">
         Evaluation Suite not found.
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-6 sm:p-8">
       {/* Navigation & Header */}
       <div>
         <button

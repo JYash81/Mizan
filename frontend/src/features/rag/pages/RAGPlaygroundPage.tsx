@@ -115,16 +115,16 @@ export function RAGPlaygroundPage() {
 
   if (!workspaceId) {
     return (
-      <div className="p-8 text-center text-slate-400">
-        <AlertCircle className="w-12 h-12 mx-auto text-amber-500 mb-3" />
-        <h2 className="text-lg font-semibold text-white">No Workspace Selected</h2>
-        <p className="text-sm mt-1">Please select an active workspace to access the RAG Playground.</p>
+      <div className="max-w-7xl mx-auto p-12 my-6 bg-slate-900 text-slate-200 rounded-2xl border border-slate-800 shadow-xl text-center space-y-3">
+        <AlertCircle className="w-10 h-10 mx-auto text-amber-400" />
+        <h2 className="text-lg font-semibold text-slate-100">No Workspace Selected</h2>
+        <p className="text-xs text-slate-400">Please select an active workspace to access the RAG Playground.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 text-slate-100 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 max-w-7xl mx-auto p-6 sm:p-8 my-6 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-xl pb-12">
       {/* Free Infrastructure Policy Banner */}
       <div className="bg-gradient-to-r from-emerald-950/70 via-slate-900 to-indigo-950/70 border border-emerald-500/30 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">

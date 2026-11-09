@@ -41,7 +41,7 @@ export function ModelZooPage() {
   const totalPages = data?.total_pages || 1;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-6 sm:p-8">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-5">
         <div>

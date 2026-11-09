@@ -91,32 +91,34 @@ export const RecommendationDetailPage: React.FC = () => {
 
   if (!workspaceId || !runId) {
     return (
-      <div className="p-8 text-center text-neutral-400">
-        Please select a valid workspace and recommendation run.
+      <div className="max-w-7xl mx-auto p-12 my-6 bg-slate-900 text-slate-200 rounded-2xl border border-slate-800 shadow-xl text-center space-y-3">
+        <Sparkles className="w-10 h-10 mx-auto text-emerald-400" />
+        <h2 className="text-lg font-semibold text-slate-100">Select Recommendation Run</h2>
+        <p className="text-xs text-slate-400">Please select a valid workspace and recommendation run.</p>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="p-16 text-center text-sm text-neutral-500 flex items-center justify-center gap-2">
-        <RefreshCw className="w-5 h-5 animate-spin text-emerald-500" />
-        <span>Loading multi-objective recommendation run...</span>
+      <div className="max-w-7xl mx-auto p-16 my-6 bg-slate-900 text-slate-200 rounded-2xl border border-slate-800 shadow-xl text-center space-y-3 flex flex-col items-center justify-center">
+        <RefreshCw className="w-6 h-6 animate-spin text-emerald-500" />
+        <span className="text-sm font-medium">Loading multi-objective recommendation run...</span>
       </div>
     );
   }
 
   if (error || !run) {
     return (
-      <div className="p-8 max-w-lg mx-auto text-center space-y-3">
-        <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
-        <h3 className="font-semibold text-neutral-100">Recommendation Run Not Found</h3>
-        <p className="text-xs text-neutral-400">
+      <div className="max-w-7xl mx-auto p-12 my-6 bg-slate-900 text-slate-200 rounded-2xl border border-slate-800 shadow-xl text-center space-y-3">
+        <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto" />
+        <h3 className="font-semibold text-slate-100">Recommendation Run Not Found</h3>
+        <p className="text-xs text-slate-400">
           {(error as Error)?.message || "The specified recommendation run does not exist or access is unauthorized."}
         </p>
         <button
           onClick={() => navigate("/recommendations")}
-          className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-medium rounded-lg mt-2 transition-colors"
+          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg mt-2 transition-colors"
         >
           Back to Recommendations
         </button>
@@ -154,7 +156,7 @@ export const RecommendationDetailPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-6 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-xl my-6">
       {/* Top Bar Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-4">
         <div>

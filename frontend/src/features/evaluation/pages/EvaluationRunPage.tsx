@@ -67,12 +67,16 @@ export function EvaluationRunPage() {
   };
 
   if (isLoading) {
-    return <div className="py-12 text-center text-sm text-muted-foreground">Loading evaluation scorecard...</div>;
+    return (
+      <div className="max-w-7xl mx-auto p-12 text-center text-sm text-muted-foreground">
+        Loading evaluation scorecard...
+      </div>
+    );
   }
 
   if (error || !run) {
     return (
-      <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-6 text-center text-destructive">
+      <div className="max-w-7xl mx-auto p-8 my-6 rounded-xl border border-destructive/50 bg-destructive/10 text-center text-destructive">
         Evaluation run not found or could not be loaded.
       </div>
     );
@@ -102,7 +106,7 @@ export function EvaluationRunPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-6 sm:p-8">
       {/* Header & Navigation */}
       <div>
         <button

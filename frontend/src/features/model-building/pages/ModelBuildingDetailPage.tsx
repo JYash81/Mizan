@@ -60,16 +60,17 @@ export const ModelBuildingDetailPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="p-12 text-center text-slate-500 text-sm">
-        Loading model build run details...
+      <div className="max-w-7xl mx-auto p-12 my-6 bg-slate-900 text-slate-200 rounded-2xl border border-slate-800 shadow-xl text-center space-y-3">
+        <Cpu className="h-6 w-6 animate-spin mx-auto text-indigo-400" />
+        <p className="text-sm font-medium">Loading model build run details...</p>
       </div>
     );
   }
 
   if (!run) {
     return (
-      <div className="p-12 text-center text-slate-400 space-y-3">
-        <p className="text-base font-semibold">Build run not found</p>
+      <div className="max-w-7xl mx-auto p-12 my-6 bg-slate-900 text-slate-200 rounded-2xl border border-slate-800 shadow-xl text-center space-y-3">
+        <p className="text-base font-semibold text-slate-100">Build run not found</p>
         <Link
           to={`/workspaces/${workspaceId}/model-building`}
           className="text-xs text-indigo-400 hover:underline"
@@ -86,7 +87,7 @@ export const ModelBuildingDetailPage: React.FC = () => {
   const isColabMode = run.execution_mode === "MANUAL_COLAB_NOTEBOOK";
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-6 sm:p-8 my-6 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-xl">
       {/* Back Link & Header */}
       <div>
         <Link

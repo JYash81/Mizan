@@ -32,9 +32,9 @@ def register_exception_handlers(app: FastAPI) -> None:
         return error_response(exc.status_code, code, str(exc.detail))
 
     @app.exception_handler(SQLAlchemyError)
-    async def database_error(_: Request, __: SQLAlchemyError) -> JSONResponse:
-        return error_response(503, "DATABASE_ERROR", "The database is temporarily unavailable.")
+    async def database_error(_: Request, exc: SQLAlchemyError) -> JSONResponse:
+        return error_response(503, "DATABASE_ERROR", f"Database error: {type(exc).__name__}: {str(exc)}")
 
     @app.exception_handler(Exception)
-    async def internal_error(_: Request, __: Exception) -> JSONResponse:
-        return error_response(500, "INTERNAL_ERROR", "An unexpected error occurred.")
+    async def internal_error(_: Request, exc: Exception) -> JSONResponse:
+        return error_response(500, "INTERNAL_ERROR", f"Internal error: {type(exc).__name__}: {str(exc)}")

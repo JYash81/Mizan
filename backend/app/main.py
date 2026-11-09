@@ -41,6 +41,11 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "X-XSRF-Token"],
     )
+
+    @app.get("/")
+    def root() -> dict[str, str]:
+        return {"status": "ok", "service": "Mizan API", "version": settings.app_version}
+
     app.include_router(router)
     register_exception_handlers(app)
     return app

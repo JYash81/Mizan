@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: mizan-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    region: oregon
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: '["https://llmguru.hennt.in","https://hennt.in"]'
+      - key: FRONTEND_URL
+        value: https://llmguru.hennt.in
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: SESSION_COOKIE_SAMESITE
+        value: none
+      - key: DATABASE_URL
+        value: mysql+pymysql://u755980275_Llmguru:yeswantH%40181%23@srv2209.hstgr.io:3306/u755980275_Llmgurudb
+      - key: SMTP_ENABLED
+        value: "true"
+      - key: SMTP_HOST
+        value: smtp.hostinger.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USER
+        value: llmguru@hennt.in
+      - key: SMTP_PASSWORD
+        value: yeswantH@181#
+      - key: SMTP_FROM_EMAIL
+        value: llmguru@hennt.in
+      - key: SMTP_USE_SSL
+        value: "true"
+      - key: BACKUP_PASSPHRASE
+        value: mizan-production-disaster-recovery-key-passphrase-2026-safe

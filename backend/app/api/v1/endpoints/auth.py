@@ -62,11 +62,6 @@ def register(
                 purpose=TokenPurpose.EMAIL_VERIFICATION,
                 settings=settings,
             )
-            get_email_provider(settings).send_verification_email(
-                email=existing.email,
-                token=issued_tok.raw_token,
-                user_name=existing.full_name,
-            )
             record_audit_event(
                 db=db,
                 event_type="AUTH_VERIFICATION_RESENT",
@@ -75,6 +70,15 @@ def register(
                 correlation_id=get_correlation_id(request),
             )
             db.commit()
+
+            try:
+                get_email_provider(settings).send_verification_email(
+                    email=existing.email,
+                    token=issued_tok.raw_token,
+                    user_name=existing.full_name,
+                )
+            except Exception:
+                pass
         # Prevent user enumeration with neutral response
         return {
             "data": {
@@ -101,14 +105,6 @@ def register(
         settings=settings,
     )
 
-    # Dispatch email
-    email_provider = get_email_provider(settings)
-    email_provider.send_verification_email(
-        email=user.email,
-        token=issued_tok.raw_token,
-        user_name=user.full_name,
-    )
-
     correlation_id = get_correlation_id(request)
     record_audit_event(
         db=db,
@@ -119,6 +115,20 @@ def register(
         safe_metadata={"email": user.email},
     )
     db.commit()
+
+    # Dispatch email outside the DB transaction so network SMTP delay doesn't drop MySQL connection
+    try:
+        email_provider = get_email_provider(settings)
+        email_provider.send_verification_email(
+            email=user.email,
+            token=issued_tok.raw_token,
+            user_name=user.full_name,
+        )
+    except Exception as exc:
+        import logging
+        logging.getLogger("app.api.v1.auth").warning(
+            "Failed to dispatch verification email to %s: %s", user.email, exc
+        )
 
     return {
         "data": {
@@ -182,12 +192,6 @@ def resend_verification(
             purpose=TokenPurpose.EMAIL_VERIFICATION,
             settings=settings,
         )
-        email_provider = get_email_provider(settings)
-        email_provider.send_verification_email(
-            email=user.email,
-            token=issued.raw_token,
-            user_name=user.full_name,
-        )
         record_audit_event(
             db=db,
             event_type="AUTH_VERIFICATION_RESENT",
@@ -196,6 +200,16 @@ def resend_verification(
             correlation_id=get_correlation_id(request),
         )
         db.commit()
+
+        try:
+            email_provider = get_email_provider(settings)
+            email_provider.send_verification_email(
+                email=user.email,
+                token=issued.raw_token,
+                user_name=user.full_name,
+            )
+        except Exception:
+            pass
 
     return {
         "data": {
@@ -340,12 +354,6 @@ def forgot_password(
             purpose=TokenPurpose.PASSWORD_RESET,
             settings=settings,
         )
-        email_provider = get_email_provider(settings)
-        email_provider.send_password_reset_email(
-            email=user.email,
-            token=issued.raw_token,
-            user_name=user.full_name,
-        )
         record_audit_event(
             db=db,
             event_type="AUTH_PASSWORD_RESET_REQUESTED",
@@ -354,6 +362,16 @@ def forgot_password(
             correlation_id=get_correlation_id(request),
         )
         db.commit()
+
+        try:
+            email_provider = get_email_provider(settings)
+            email_provider.send_password_reset_email(
+                email=user.email,
+                token=issued.raw_token,
+                user_name=user.full_name,
+            )
+        except Exception:
+            pass
 
     return {
         "data": {

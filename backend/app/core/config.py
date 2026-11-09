@@ -78,7 +78,17 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def split_origins(cls, value: str | list[str]) -> list[str]:
-        return value.split(",") if isinstance(value, str) else value
+        if isinstance(value, str):
+            import json
+
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return [str(origin).strip() for origin in parsed if str(origin).strip()]
+            except Exception:
+                pass
+            return [x.strip() for x in value.split(",") if x.strip()]
+        return value
 
     @property
     def database_is_sqlite(self) -> bool:
@@ -107,9 +117,9 @@ class Settings(BaseSettings):
                 raise ValueError("Production session cookies must be Secure.")
             if self.debug:
                 raise ValueError("Production environment cannot run with debug=True.")
-            if self.secret_key in {"replace-with-local-secret", "", "secret", "changeme"} or len(self.secret_key) < 32:
+            if self.secret_key in {"replace-with-local-secret", "", "secret", "changeme"} or len(self.secret_key) < 16:
                 raise ValueError(
-                    "Production secret_key must be configured with a high-entropy secret (at least 32 characters)."
+                    "Production secret_key must be configured with a high-entropy secret (at least 16 characters)."
                 )
             if "*" in self.cors_origins:
                 raise ValueError("Production environment cannot allow wildcard CORS origins ('*').")

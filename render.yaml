@@ -4,7 +4,7 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"
     plan: free
     region: oregon
     envVars:
@@ -13,9 +13,9 @@ services:
       - key: DEBUG
         value: "false"
       - key: SECRET_KEY
-        generateValue: true
+        value: 94e8c1b72a084ff5a7114e4cbefea78d052a23337a5f6e80b2a74c43149ef182
       - key: CORS_ORIGINS
-        value: '["https://llmguru.hennt.in","https://hennt.in"]'
+        value: https://llmguru.hennt.in,https://hennt.in
       - key: FRONTEND_URL
         value: https://llmguru.hennt.in
       - key: SESSION_COOKIE_SECURE

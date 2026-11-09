@@ -98,7 +98,11 @@ export function DatasetsPage() {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
-  const datasets = data?.datasets || [];
+  const datasets: Dataset[] = Array.isArray(data)
+    ? data
+    : Array.isArray((data as any)?.datasets)
+    ? (data as any).datasets
+    : [];
   const filteredDatasets = datasets.filter(
     (d) =>
       d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

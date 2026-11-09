@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "../../lib/api/client";
+import { apiGet, apiPost, buildApiUrl, getSessionToken } from "../../lib/api/client";
 import type {
   CreateManualCasePayload,
   CreateRunPayload,
@@ -156,13 +156,17 @@ export async function fetchReport(
   runId: string,
   format: "json" | "markdown" | "csv" = "json"
 ): Promise<FullEvaluationReport | string> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
-  const url = `${baseUrl}/workspaces/${workspaceId}/evaluation/runs/${runId}/report?format=${format}`;
+  const url = buildApiUrl(`/workspaces/${workspaceId}/evaluation/runs/${runId}/report?format=${format}`);
+  const headers = new Headers({
+    Accept: format === "json" ? "application/json" : "text/plain",
+  });
+  const token = getSessionToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
   const response = await fetch(url, {
     credentials: "include",
-    headers: {
-      Accept: format === "json" ? "application/json" : "text/plain",
-    },
+    headers,
   });
   if (!response.ok) {
     throw new Error(`Failed to fetch report in ${format} format`);

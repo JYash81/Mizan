@@ -18,6 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
+import { buildApiUrl } from "../../../lib/api/client";
 import {
   acknowledgeAlert,
   getMetricsSummary,
@@ -148,7 +149,7 @@ export function OperationsOverviewPage() {
             Refresh
           </button>
           <a
-            href="/api/v1/ops/metrics/prometheus"
+            href={buildApiUrl("/ops/metrics/prometheus")}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-sm font-medium hover:bg-primary/20 transition"

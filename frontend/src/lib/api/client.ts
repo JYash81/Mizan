@@ -20,14 +20,28 @@ export function setCsrfToken(token: string | null): void {
   currentCsrfToken = token;
   if (token) {
     sessionStorage.setItem("mizan_csrf", token);
+    try {
+      localStorage.setItem("mizan_csrf", token);
+    } catch {}
   } else {
     sessionStorage.removeItem("mizan_csrf");
+    try {
+      localStorage.removeItem("mizan_csrf");
+    } catch {}
   }
 }
 
 export function getCsrfToken(): string | null {
   if (!currentCsrfToken) {
-    currentCsrfToken = sessionStorage.getItem("mizan_csrf");
+    currentCsrfToken =
+      sessionStorage.getItem("mizan_csrf") ||
+      (() => {
+        try {
+          return localStorage.getItem("mizan_csrf");
+        } catch {
+          return null;
+        }
+      })();
   }
   return currentCsrfToken;
 }
@@ -36,14 +50,28 @@ export function setSessionToken(token: string | null): void {
   currentSessionToken = token;
   if (token) {
     sessionStorage.setItem("mizan_session_token", token);
+    try {
+      localStorage.setItem("mizan_session_token", token);
+    } catch {}
   } else {
     sessionStorage.removeItem("mizan_session_token");
+    try {
+      localStorage.removeItem("mizan_session_token");
+    } catch {}
   }
 }
 
 export function getSessionToken(): string | null {
   if (!currentSessionToken) {
-    currentSessionToken = sessionStorage.getItem("mizan_session_token");
+    currentSessionToken =
+      sessionStorage.getItem("mizan_session_token") ||
+      (() => {
+        try {
+          return localStorage.getItem("mizan_session_token");
+        } catch {
+          return null;
+        }
+      })();
   }
   return currentSessionToken;
 }
@@ -65,20 +93,24 @@ export function buildApiUrl(path: string): string {
     base = `${base}/api/v1`;
   }
   let cleanPath = path.trim();
-  if (cleanPath.startsWith("/api/v1/")) {
+  if (cleanPath.startsWith("/api/v1")) {
     cleanPath = cleanPath.slice(7);
-  } else if (cleanPath === "/api/v1") {
-    cleanPath = "";
+  } else if (cleanPath.startsWith("api/v1")) {
+    cleanPath = cleanPath.slice(6);
   }
-  if (!cleanPath.startsWith("/") && cleanPath.length > 0) {
+  if (!cleanPath.startsWith("/")) {
     cleanPath = `/${cleanPath}`;
+  }
+  if (cleanPath === "/") {
+    return base;
   }
   return `${base}${cleanPath}`;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: RequestInit, retryCount = 0): Promise<T> {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 30000);
+  // 65s timeout to handle free cloud cold wakeups gracefully
+  const timeout = window.setTimeout(() => controller.abort(), 65000);
 
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) {
@@ -111,6 +143,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const body = isJson ? await response.json() : null;
 
     if (!response.ok) {
+      // Auto-retry once on 502/503 for idempotent GET requests while server is waking up
+      const isGet = !init?.method || init.method.toUpperCase() === "GET";
+      if (isGet && (response.status === 502 || response.status === 503) && retryCount < 2) {
+        await new Promise((res) => setTimeout(res, 2000 * (retryCount + 1)));
+        return request<T>(path, init, retryCount + 1);
+      }
+
       const errorMessage =
         body?.error?.message ??
         body?.detail ??
@@ -123,10 +162,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return (body?.data !== undefined ? body.data : body) as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new ApiError("Request timed out. Please check your connection.", 408, "TIMEOUT");
+
+    // Auto-retry once on network/abort errors for GET requests
+    const isGet = !init?.method || init.method.toUpperCase() === "GET";
+    if (isGet && retryCount < 1) {
+      await new Promise((res) => setTimeout(res, 2500));
+      return request<T>(path, init, retryCount + 1);
     }
-    throw new ApiError("Could not connect to Mizan backend service.", 503, "NETWORK_ERROR");
+
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError(
+        "Cloud backend server is waking up. Please allow a few moments and try again.",
+        408,
+        "TIMEOUT"
+      );
+    }
+    throw new ApiError(
+      "Could not connect to Mizan cloud backend. Please verify your connection or try again in a moment.",
+      503,
+      "NETWORK_ERROR"
+    );
   } finally {
     window.clearTimeout(timeout);
   }

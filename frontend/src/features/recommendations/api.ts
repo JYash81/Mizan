@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPost, apiPut } from "../../lib/api/client";
+import { apiDelete, apiGet, apiPost, apiPut, buildApiUrl, getSessionToken } from "../../lib/api/client";
 import type {
   CandidateValidationRequest,
   CandidateValidationResult,
@@ -90,11 +90,16 @@ export async function exportRecommendationReport(
   runId: string,
   format: "json" | "markdown" | "csv"
 ): Promise<string> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
-  const res = await fetch(
-    `${baseUrl}/workspaces/${workspaceId}/recommendations/runs/${runId}/export?format=${format}`,
-    { credentials: "include" }
-  );
+  const url = buildApiUrl(`/workspaces/${workspaceId}/recommendations/runs/${runId}/export?format=${format}`);
+  const headers = new Headers();
+  const token = getSessionToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const res = await fetch(url, {
+    credentials: "include",
+    headers,
+  });
   if (!res.ok) {
     throw new Error(`Export failed with status ${res.status}`);
   }

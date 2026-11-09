@@ -52,7 +52,11 @@ export function DatasetDetailPage() {
     enabled: !!workspaceId && !!datasetId,
   });
 
-  const versions = versionsData?.versions || [];
+  const versions: DatasetVersion[] = Array.isArray(versionsData)
+    ? versionsData
+    : Array.isArray((versionsData as any)?.versions)
+    ? (versionsData as any).versions
+    : [];
   const activeVersion =
     versions.find((v) => v.id === selectedVersionId) ||
     versions[0] ||
@@ -149,7 +153,11 @@ export function DatasetDetailPage() {
     );
   }
 
-  const documents = docsData?.documents || [];
+  const documents: Document[] = Array.isArray(docsData)
+    ? docsData
+    : Array.isArray((docsData as any)?.documents)
+    ? (docsData as any).documents
+    : [];
   const isDraft = activeVersion?.status === "DRAFT";
 
   return (

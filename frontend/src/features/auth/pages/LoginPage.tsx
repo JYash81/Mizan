@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, RefreshCw } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { ApiError } from "../../../lib/api/client";
 
@@ -90,8 +90,17 @@ export function LoginPage() {
           </div>
 
           <button type="submit" disabled={isSubmitting} className="btn-primary">
-            {isSubmitting ? "Signing in..." : "Sign in"}
-            <ArrowRight size={16} />
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <RefreshCw size={16} className="animate-spin" />
+                <span>Signing in... (Waking up cloud if idle)</span>
+              </span>
+            ) : (
+              <>
+                <span>Sign in</span>
+                <ArrowRight size={16} />
+              </>
+            )}
           </button>
         </form>
 

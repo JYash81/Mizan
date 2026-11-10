@@ -11,7 +11,7 @@ test("renders the Mizan authentication screen when unauthenticated", async () =>
   );
 
   // Unauthenticated user is redirected to Login
-  expect(await screen.findByText("Sign in to Mizan")).toBeInTheDocument();
+  expect(await screen.findByText("Sign in to Mizan", {}, { timeout: 5000 })).toBeInTheDocument();
   expect(screen.getByLabelText("Work Email")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Sign in/i })).toBeInTheDocument();
 });

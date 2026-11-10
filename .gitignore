@@ -9,8 +9,8 @@ __pycache__/
 node_modules/
 dist/
 coverage/
+storage/
 backend/storage/
-storage/development/
 *.db
 *.sqlite*
 cloudflared.exe

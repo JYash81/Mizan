@@ -9,13 +9,13 @@
 header("Content-Type: application/json; charset=UTF-8");
 header("X-Content-Type-Options: nosniff");
 
-// Pre-shared authentication secret
-$EXPECTED_SECRET = getenv("MAIL_RELAY_SECRET") ?: "mizan-secure-mail-relay-key-2026-safe";
+// Pre-shared authentication secret (must be set in environment)
+$EXPECTED_SECRET = getenv("MAIL_RELAY_SECRET");
 $authHeader = $_SERVER['HTTP_X_MAIL_SECRET'] ?? '';
 
-if (!$authHeader || !hash_equals($EXPECTED_SECRET, $authHeader)) {
+if (!$EXPECTED_SECRET || !$authHeader || !hash_equals($EXPECTED_SECRET, $authHeader)) {
     http_response_code(403);
-    echo json_encode(["error" => "Forbidden: Invalid mail relay secret."]);
+    echo json_encode(["error" => "Forbidden: Invalid or unconfigured mail relay secret."]);
     exit;
 }
 
@@ -49,10 +49,14 @@ $fromName = "Mizan Platform";
 
 // Function 1: Direct SMTP over SSL to Hostinger (Port 443 is not used here; PHP inside Hostinger connects to Port 465 locally)
 function sendViaHostingerSmtp($to, $subject, $text, $html, $fromEmail, $fromName) {
-    $host = "smtp.hostinger.com";
-    $port = 465;
-    $user = "llmguru@hennt.in";
-    $pass = 'yeswantH@181#';
+    $host = getenv("SMTP_HOST") ?: "smtp.hostinger.com";
+    $port = (int)(getenv("SMTP_PORT") ?: 465);
+    $user = getenv("SMTP_USER") ?: "llmguru@hennt.in";
+    $pass = getenv("SMTP_PASSWORD");
+
+    if (!$pass) {
+        return false;
+    }
 
     $context = stream_context_create([
         'ssl' => [

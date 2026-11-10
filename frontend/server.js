@@ -21,19 +21,18 @@ const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
 const BACKEND_URL = process.env.BACKEND_URL || "https://mizan-api-mq0i.onrender.com";
 
-// Determine static root directory (checks ./dist, then current directory)
+// Determine static root directory (checks ./dist, then ./public)
 function resolveStaticRoot() {
   const candidates = [
     path.join(__dirname, "dist"),
     path.join(__dirname, "public"),
-    __dirname,
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(path.join(candidate, "index.html"))) {
       return candidate;
     }
   }
-  return __dirname;
+  return path.join(__dirname, "dist");
 }
 
 const STATIC_ROOT = resolveStaticRoot();
@@ -76,6 +75,10 @@ function setSecurityHeaders(res) {
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://*.onrender.com https://*.hennt.in http://localhost:* http://127.0.0.1:*;"
+  );
 }
 
 function sendFile(req, res, filePath, statusCode = 200) {
@@ -201,7 +204,19 @@ function proxyApiRequest(req, res) {
 }
 
 // Direct Hostinger SMTP delivery engine for HTTPS mail relay
-function sendSmtpViaHostinger({ to, subject, text, html, host = "smtp.hostinger.com", port = 465, user = "llmguru@hennt.in", pass = "yeswantH@181#" }) {
+function sendSmtpViaHostinger({
+  to,
+  subject,
+  text,
+  html,
+  host = process.env.SMTP_HOST || "smtp.hostinger.com",
+  port = Number(process.env.SMTP_PORT) || 465,
+  user = process.env.SMTP_USER,
+  pass = process.env.SMTP_PASSWORD,
+}) {
+  if (!user || !pass) {
+    return Promise.reject(new Error("SMTP credentials missing: set SMTP_USER and SMTP_PASSWORD in environment."));
+  }
   return new Promise((resolve, reject) => {
     let resolved = false;
     const socket = tls.connect({ host, port, minVersion: "TLSv1.2" }, () => {
@@ -329,12 +344,12 @@ const server = http.createServer((req, res) => {
     req.method === "POST"
   ) {
     const authSecret = req.headers["x-mail-secret"];
-    const expectedSecret = process.env.MAIL_RELAY_SECRET || "mizan-secure-mail-relay-key-2026-safe";
-    if (!authSecret || authSecret !== expectedSecret) {
+    const expectedSecret = process.env.MAIL_RELAY_SECRET;
+    if (!expectedSecret || !authSecret || authSecret !== expectedSecret) {
       setSecurityHeaders(res);
       res.statusCode = 403;
       res.setHeader("Content-Type", "application/json; charset=utf-8");
-      res.end(JSON.stringify({ error: "Forbidden: Invalid mail relay secret." }));
+      res.end(JSON.stringify({ error: "Forbidden: Invalid or unconfigured mail relay secret." }));
       return;
     }
 

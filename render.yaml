@@ -13,19 +13,17 @@ services:
       - key: DEBUG
         value: "false"
       - key: SECRET_KEY
-        value: 94e8c1b72a084ff5a7114e4cbefea78d052a23337a5f6e80b2a74c43149ef182
+        sync: false
       - key: CORS_ORIGINS
-        value: https://llmguru.hennt.in,http://llmguru.hennt.in,https://hennt.in,http://hennt.in,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173
-      - key: CORS_ORIGIN_REGEX
-        value: "^https?://(localhost|127\\.0\\.0\\.1|.*\\.hennt\\.in|hennt\\.in)(:[0-9]+)?$"
+        value: https://mizan.hennt.in,https://llmguru.hennt.in,https://hennt.in,http://localhost:5173,http://localhost:3000
       - key: FRONTEND_URL
-        value: https://llmguru.hennt.in
+        value: https://mizan.hennt.in
       - key: SESSION_COOKIE_SECURE
         value: "true"
       - key: SESSION_COOKIE_SAMESITE
         value: none
       - key: DATABASE_URL
-        value: mysql+pymysql://u755980275_Llmguru:yeswantH%40181%23@srv2209.hstgr.io:3306/u755980275_Llmgurudb
+        sync: false
       - key: SMTP_ENABLED
         value: "true"
       - key: SMTP_HOST
@@ -35,18 +33,18 @@ services:
       - key: SMTP_USER
         value: llmguru@hennt.in
       - key: SMTP_PASSWORD
-        value: yeswantH@181#
+        sync: false
       - key: SMTP_FROM_EMAIL
         value: llmguru@hennt.in
       - key: SMTP_USE_SSL
         value: "true"
       - key: MAIL_RELAY_URL
-        value: https://llmguru.hennt.in/mail-relay.php
+        value: https://mizan.hennt.in/mail-relay.php
       - key: MAIL_RELAY_SECRET
-        value: mizan-secure-mail-relay-key-2026-safe
+        sync: false
       - key: BACKUP_PASSPHRASE
-        value: mizan-production-disaster-recovery-key-passphrase-2026-safe
+        sync: false
       - key: PLATFORM_OPERATOR_EMAILS
         value: yeswanthjanne86@gmail.com,llmguru@hennt.in
       - key: PROMETHEUS_SCRAPE_TOKEN
-        value: mizan-ops-prometheus-scrape-token-389f4b7a6e12c98d0
+        sync: false

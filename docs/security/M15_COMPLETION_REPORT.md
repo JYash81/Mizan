@@ -11,7 +11,7 @@ Milestone 15 has been fully executed, tested, and integrated into the Mizan plat
 ## 2. Key Accomplishments by Phase
 
 ### Phase 0: Baseline & Dependency Audit
-- Verified baseline backend suite (229/229 passing) and frontend suite (52/52 passing).
+- Verified baseline backend suite (229/229 passing) and frontend suite (53/53 passing).
 - Upgraded `pytest` to 9.2.0, resolving advisory `PYSEC-2026-1845`.
 - Verified `pip-audit` reports 0 vulnerabilities and `npm audit` reports 0 vulnerabilities.
 - Documented findings in `docs/security/M15_INITIAL_SECURITY_BASELINE.md`.
@@ -56,7 +56,7 @@ Milestone 15 has been fully executed, tested, and integrated into the Mizan plat
 | **Backend Total Test Suite** | 271 | 271 | 0 | **100% PASS** |
 | *-- Core Regression Suite (M1–M14)* | 229 | 229 | 0 | **100% PASS** |
 | *-- Dedicated Security Suite (M15 SEC-001..42)* | 42 | 42 | 0 | **100% PASS** |
-| **Frontend Test Suite (Vitest)** | 52 | 52 | 0 | **100% PASS** |
+| **Frontend Test Suite (Vitest)** | 53 | 53 | 0 | **100% PASS** |
 | **Frontend Lint (ESLint)** | Checked | Clean | 0 | **PASS** |
 | **Frontend Type Check (tsc -b)** | Checked | Clean | 0 | **PASS** |
 | **Frontend Production Build (Vite)** | Compiled | 1725 modules | 0 | **SUCCESS** |

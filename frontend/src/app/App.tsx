@@ -46,6 +46,7 @@ import { SettingsSecurityPage } from "../features/auth/pages/SettingsSecurityPag
 import { VerifyEmailPage } from "../features/auth/pages/VerifyEmailPage";
 import { OnboardingPage } from "../features/workspaces/pages/OnboardingPage";
 import { TeamManagementPage } from "../features/workspaces/pages/TeamManagementPage";
+import { HomePage } from "../features/home/HomePage";
 
 const WorkspacesPage = lazy(() =>
   import("../features/workspaces/pages/WorkspacesPage").then((m) => ({ default: m.WorkspacesPage }))
@@ -172,7 +173,7 @@ const OperationsOverviewPage = lazy(() =>
 type Version = { name: string; version: string; environment: string };
 
 const nav = [
-  { label: "Overview", path: "/", icon: LayoutDashboard },
+  { label: "Overview", path: "/dashboard", icon: LayoutDashboard },
   { label: "Team", path: "/team", icon: Users },
   { label: "Workspaces", path: "/workspaces", icon: FolderKanban },
   { label: "Datasets", path: "/datasets", icon: Database },
@@ -260,7 +261,7 @@ function Shell({ children }: { children: ReactNode }) {
             <NavLink
               key={path}
               to={path}
-              end={path === "/"}
+              end={path === "/dashboard"}
               className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
             >
               <Icon size={18} />
@@ -652,20 +653,23 @@ export function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
+          {/* Public Marketing Homepage */}
+          <Route path="/" element={<HomePage />} />
+
           {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/onboarding"
             element={
               <ProtectedRoute>
                 <OnboardingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
               </ProtectedRoute>
             }
           />
@@ -1084,6 +1088,7 @@ export function App() {
               (item) =>
                 ![
                   "/",
+                  "/dashboard",
                   "/team",
                   "/workspaces",
                   "/settings",

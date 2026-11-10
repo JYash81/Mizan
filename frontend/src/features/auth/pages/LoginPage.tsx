@@ -20,7 +20,7 @@ export function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(email, password);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

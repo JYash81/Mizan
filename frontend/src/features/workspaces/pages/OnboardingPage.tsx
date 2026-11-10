@@ -74,7 +74,7 @@ export function OnboardingPage() {
         slug: wsSlug,
       });
       await refreshProfile();
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

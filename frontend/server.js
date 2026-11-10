@@ -1,11 +1,13 @@
 /**
  * Mizan Production Frontend Node.js Server for Hostinger
  * 
- * Zero-dependency, high-performance static file server and SPA routing engine.
+ * Zero-dependency, high-performance static file server, SPA routing engine,
+ * and optional built-in API proxy to Mizan Cloud Backend.
  * Fully compatible with Hostinger hPanel Node.js (Phusion Passenger / Reverse Proxy).
  */
 
 import http from "node:http";
+import https from "node:https";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -16,6 +18,7 @@ const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
+const BACKEND_URL = process.env.BACKEND_URL || "https://mizan-api-mq0i.onrender.com";
 
 // Determine static root directory (checks ./dist, then current directory)
 function resolveStaticRoot() {
@@ -34,6 +37,7 @@ function resolveStaticRoot() {
 
 const STATIC_ROOT = resolveStaticRoot();
 console.log(`[Mizan Server] Static root directory: ${STATIC_ROOT}`);
+console.log(`[Mizan Server] Backend proxy target: ${BACKEND_URL}`);
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -136,14 +140,66 @@ function sendSpaFallback(req, res) {
   }
 }
 
-const server = http.createServer((req, res) => {
-  if (req.method !== "GET" && req.method !== "HEAD") {
-    res.statusCode = 405;
-    res.setHeader("Allow", "GET, HEAD");
-    res.end("Method Not Allowed");
-    return;
-  }
+// Transparently proxy /api/ requests to the Render cloud backend
+function proxyApiRequest(req, res) {
+  const targetUrl = new URL(req.url, BACKEND_URL);
+  const clientReqHeaders = { ...req.headers };
 
+  delete clientReqHeaders.host;
+  clientReqHeaders["x-forwarded-host"] = req.headers.host;
+  clientReqHeaders["x-forwarded-proto"] = req.headers["x-forwarded-proto"] || "https";
+
+  const isHttps = targetUrl.protocol === "https:";
+  const client = isHttps ? https : http;
+
+  const proxyReq = client.request(
+    targetUrl,
+    {
+      method: req.method,
+      headers: clientReqHeaders,
+      timeout: 60000,
+    },
+    (proxyRes) => {
+      setSecurityHeaders(res);
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      proxyRes.pipe(res);
+    }
+  );
+
+  proxyReq.on("error", (err) => {
+    console.error("[Proxy Error]", err.message);
+    setSecurityHeaders(res);
+    res.statusCode = 502;
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.end(
+      JSON.stringify({
+        error: {
+          code: "BAD_GATEWAY",
+          message: `Unable to connect to Mizan cloud backend: ${err.message}`,
+        },
+      })
+    );
+  });
+
+  proxyReq.on("timeout", () => {
+    proxyReq.destroy();
+    setSecurityHeaders(res);
+    res.statusCode = 504;
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.end(
+      JSON.stringify({
+        error: {
+          code: "GATEWAY_TIMEOUT",
+          message: "Mizan cloud backend timed out while waking up.",
+        },
+      })
+    );
+  });
+
+  req.pipe(proxyReq);
+}
+
+const server = http.createServer((req, res) => {
   // Sanitize and decode URL
   let requestPath;
   try {
@@ -154,7 +210,13 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Health check endpoint for Hostinger monitoring
+  // 1. API Reverse Proxy: Forward all /api/ requests directly to Render
+  if (requestPath.startsWith("/api/")) {
+    proxyApiRequest(req, res);
+    return;
+  }
+
+  // 2. Health check endpoint for Hostinger monitoring
   if (requestPath === "/node-health" || requestPath === "/server-status") {
     setSecurityHeaders(res);
     res.statusCode = 200;
@@ -165,9 +227,17 @@ const server = http.createServer((req, res) => {
         uptime_seconds: process.uptime(),
         node_version: process.version,
         static_root: STATIC_ROOT,
+        backend_proxy: BACKEND_URL,
         timestamp: new Date().toISOString(),
       })
     );
+    return;
+  }
+
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    res.statusCode = 405;
+    res.setHeader("Allow", "GET, HEAD");
+    res.end("Method Not Allowed");
     return;
   }
 
@@ -175,7 +245,7 @@ const server = http.createServer((req, res) => {
   const safePath = path.normalize(requestPath).replace(/^(\.\.[/\\])+/, "");
   const targetPath = path.join(STATIC_ROOT, safePath);
 
-  // If request matches existing file, serve it directly
+  // If request matches existing static file, serve it directly
   fs.stat(targetPath, (err, stats) => {
     if (!err && stats.isFile()) {
       sendFile(req, res, targetPath);

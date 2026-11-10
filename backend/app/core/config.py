@@ -14,7 +14,17 @@ class Settings(BaseSettings):
     debug: bool = False
     secret_key: str = "replace-with-local-secret"
     database_url: str = "sqlite:///./storage/development/mizan.db"
-    cors_origins: list[str] | str = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    cors_origins: list[str] | str = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://llmguru.hennt.in",
+        "http://llmguru.hennt.in",
+        "https://hennt.in",
+        "http://hennt.in",
+    ]
+    cors_origin_regex: str | None = r"^https?://(localhost|127\.0\.0\.1|.*\.hennt\.in|hennt\.in)(:[0-9]+)?$"
     argon2_time_cost: int = 2
     argon2_memory_cost: int = 19456
     argon2_parallelism: int = 1

@@ -25,9 +25,9 @@
 ---
 
 ## Task 1: Deployment Identity Verification
-- **Local Git Repository Head:** `f6ccb72` (`main`).
+- **Local Git Repository Head:** `1f262e5` (`main`).
 - **Application Semantic Version:** `0.1.0`, Environment: `production`.
-- **Render Deployment Identification:** Render deploys via Git Blueprint tracking commits (e.g. `1bf43f3`, `df62379`, `f6ccb72`).
+- **Render Deployment Identification:** Render deploys via Git Blueprint tracking commits (`1f262e5`).
 - **Public API Version Response:**
   - `GET /api/v1/version` &rarr; `{"data":{"name":"Mizan","version":"0.1.0","environment":"production"}}`
   - `GET /api/v1/system/info` &rarr; `{"data":{"api_version":"v1","environment":"production","capabilities":["foundation"]}}`
@@ -58,12 +58,12 @@
 ---
 
 ## Task 4: API Endpoint Coverage Matrix
-- **Application Surface:** 239 total FastAPI routes across 23 sub-routers.
+- **Application Surface:** 261 total FastAPI endpoints (212 unique route paths) across 25 sub-routers.
 - **E2E Scenario Execution:** 51 core functional scenarios passed.
 - **Governance Gate Distinction:**
-  - **Gate 1:** Dataset Privacy & Masking Approval (`/workspaces/{id}/masking-runs/{run_id}/gate1/approve`).
-  - **Gate 2:** Financial and Hardware Proposal Approval (`/workspaces/{id}/gate2/requests`).
-  - **Gate 3:** Artifact Release Approval (`/workspaces/{id}/gate3/approvals`).
+  - **Gate 1 (Milestone 4):** Dataset Privacy & Masking Approval (`/workspaces/{id}/masking-runs/{run_id}/gate1/approve`).
+  - **Gate 2 (Milestone 8):** Financial and Hardware Proposal Approval (`/workspaces/{id}/gate2/requests`).
+  - **Gate 3 (Milestone 11):** Artifact Release Approval (`/workspaces/{id}/gate3/approvals`). Consumed (not approved) by Milestone 12.
 - **Gate 2 Evaluation Approvals Audit:** Identified that test #32 was mislabeled in the 51-runner as "Gate 2 Evaluation Approvals", when Gate 2 is actually Financial & Resource Proposal Approval. Full Gate 2 semantics verified passing in `test_hardware_and_gate2.py`.
 - Full matrix documented in `docs/security/FINAL_API_ENDPOINT_COVERAGE_MATRIX.md`.
 
@@ -75,9 +75,14 @@
   - **5 Synthetic Users:** `e2e_tester_ca28e17a@example.com`, `e2e_tester_742e6811@example.com`, `e2e_tester_00914ecd@example.com`, `e2e_tester_66f78eff@example.com`, `e2e_tester_34a5b937@example.com`.
   - **5 Synthetic Organizations:** `Test Org 66f78eff`, `Test Org 34a5b937`, `Test Org 742e6811`, `Test Org 00914ecd`, `Test Org ca28e17a`.
   - **5 Synthetic Workspaces:** `Test Workspace 742e6811`, `Test Workspace 66f78eff`, `Test Workspace 00914ecd`, `Test Workspace ca28e17a`, `Test Workspace 34a5b937`.
-- **Customer Data Integrity:** The real customer organization `hennt` and workspace `Default Workspace` remain untouched.
-- **Documented Safe Cleanup Script:**
-  An administrative script `backend/cleanup_synthetic_e2e_data.py` has been drafted to prune only records matching `email LIKE 'e2e_tester_%'` and `name LIKE 'Test Org %'` via cascading foreign keys without modifying customer data.
+- **Customer Data Integrity:** The real customer organization `hennt`, workspace `Default Workspace`, and user `yeswanthjanne86@gmail.com` remain untouched and protected.
+- **Hardened Safe Cleanup Script:**
+  `backend/cleanup_synthetic_e2e_data.py` has been fully remediated and verified:
+  - Defaults to read-only DRY RUN mode.
+  - Requires explicit confirmation flag `--confirm-delete-synthetic-data-only`.
+  - Uses atomic single-transaction block (`conn.begin()`).
+  - Uses strict regex matching (`r"^e2e_tester_[0-9a-f]{8}@example\.com$"`) and validates user ownership to preserve customer records.
+  - Verified with 6 safety regression tests in `test_synthetic_cleanup_safety.py` and dry-run tested against live DB. Full details in `POST_DEPLOYMENT_SYNTHETIC_CLEANUP_REMEDIATION.md`.
 
 ---
 
@@ -91,7 +96,11 @@
 - **Production Hardening Checks:**
   - `/docs` and `/openapi.json` return **`404 Not Found`** (disabled in production).
   - Operations APIs (`/ops/alerts/instances`, `/ops/incidents`) return **`401 Unauthorized`** without valid session.
+  - Metrics Summary (`/ops/metrics/summary`) enforces active user, workspace scoping, and operator authorization.
+  - Prometheus (`/ops/metrics/prometheus`) protected with Bearer token, constant-time `secrets.compare_digest`, and fails closed with `503` in production if unconfigured.
+  - Production `SECRET_KEY` enforces 32-character floor and rejects default development secrets.
   - Security headers present: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Strict-Transport-Security: max-age=31536000; includeSubDomains`.
+  - Full details in `POST_DEPLOYMENT_METRICS_ACCESS_REMEDIATION.md` and `POST_DEPLOYMENT_SECRET_VALIDATION_REMEDIATION.md`.
 
 ---
 

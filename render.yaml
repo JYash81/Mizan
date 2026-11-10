@@ -40,3 +40,7 @@ services:
         value: "true"
       - key: BACKUP_PASSPHRASE
         value: mizan-production-disaster-recovery-key-passphrase-2026-safe
+      - key: PLATFORM_OPERATOR_EMAILS
+        value: yeswanthjanne86@gmail.com,llmguru@hennt.in
+      - key: PROMETHEUS_SCRAPE_TOKEN
+        value: mizan-ops-prometheus-scrape-token-389f4b7a6e12c98d0

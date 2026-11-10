@@ -54,8 +54,8 @@ export function DatasetDetailPage() {
 
   const versions: DatasetVersion[] = Array.isArray(versionsData)
     ? versionsData
-    : Array.isArray((versionsData as any)?.versions)
-    ? (versionsData as any).versions
+    : Array.isArray((versionsData as { versions?: DatasetVersion[] })?.versions)
+    ? (versionsData as { versions?: DatasetVersion[] }).versions ?? []
     : [];
   const activeVersion =
     versions.find((v) => v.id === selectedVersionId) ||
@@ -155,8 +155,8 @@ export function DatasetDetailPage() {
 
   const documents: Document[] = Array.isArray(docsData)
     ? docsData
-    : Array.isArray((docsData as any)?.documents)
-    ? (docsData as any).documents
+    : Array.isArray((docsData as { documents?: Document[] })?.documents)
+    ? (docsData as { documents?: Document[] }).documents ?? []
     : [];
   const isDraft = activeVersion?.status === "DRAFT";
 

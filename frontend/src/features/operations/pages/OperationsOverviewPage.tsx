@@ -47,7 +47,7 @@ export function OperationsOverviewPage() {
   // Queries
   const { data: summary, isLoading: loadingSummary, refetch: refetchSummary } = useQuery({
     queryKey: ["metrics-summary", workspaceId],
-    queryFn: () => getMetricsSummary(),
+    queryFn: () => getMetricsSummary(workspaceId),
     refetchInterval: 10000,
   });
 

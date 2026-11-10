@@ -15,8 +15,12 @@ import type {
   SliSnapshot,
 } from "./types";
 
-export async function getMetricsSummary(siteId?: string): Promise<MetricsSummary> {
-  const url = siteId ? `/ops/metrics/summary?site_id=${encodeURIComponent(siteId)}` : "/ops/metrics/summary";
+export async function getMetricsSummary(workspaceId?: string, siteId?: string): Promise<MetricsSummary> {
+  const q = new URLSearchParams();
+  if (workspaceId) q.append("workspace_id", workspaceId);
+  if (siteId) q.append("site_id", siteId);
+  const qs = q.toString();
+  const url = qs ? `/ops/metrics/summary?${qs}` : "/ops/metrics/summary";
   return apiGet<MetricsSummary>(url);
 }
 

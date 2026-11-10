@@ -73,7 +73,28 @@ class Settings(BaseSettings):
     smtp_use_ssl: bool = True
     smtp_use_tls: bool = False
     frontend_url: str = "http://localhost:5173"
+    # Dedicated Prometheus Scrape Token for authenticated monitoring scrapers
+    prometheus_scrape_token: str | None = None
+    # Platform Operator / Super-admin allowlist for cross-tenant operations access
+    platform_operator_emails: list[str] | str = []
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @field_validator("platform_operator_emails", mode="before")
+    @classmethod
+    def split_operator_emails(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, str):
+            import json
+
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return [str(e).strip().lower() for e in parsed if str(e).strip()]
+            except Exception:
+                pass
+            return [x.strip().lower() for x in value.split(",") if x.strip()]
+        if isinstance(value, list):
+            return [str(x).strip().lower() for x in value if str(x).strip()]
+        return value
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -111,15 +132,28 @@ class Settings(BaseSettings):
         if self.session_cookie_samesite.lower() == "none" and not self.session_cookie_secure:
             raise ValueError("SameSite=None requires Secure cookies.")
 
-        # Production Hardening Validations (Phase 10 / Phase 15)
+        # Production Hardening Validations (Phase 10 / Phase 15 / Post-Deployment Remediation)
+        # Note: Minimum length (>= 32 characters) is a necessary syntactic baseline but is NOT
+        # equivalent to true cryptographic entropy. A repetitive 32-character string (e.g. 32 'a's)
+        # has negligible Shannon entropy. Production secrets MUST be independently generated using
+        # a cryptographically secure pseudorandom number generator (CSPRNG), e.g. `openssl rand -hex 32`
+        # or `python -c "import secrets; print(secrets.token_hex(32))"`, providing at least 256 bits of entropy.
         if self.app_env.lower() == "production":
             if not self.session_cookie_secure:
                 raise ValueError("Production session cookies must be Secure.")
             if self.debug:
                 raise ValueError("Production environment cannot run with debug=True.")
-            if self.secret_key in {"replace-with-local-secret", "", "secret", "changeme"} or len(self.secret_key) < 16:
+            insecure_defaults = {
+                "replace-with-local-secret",
+                "",
+                "secret",
+                "changeme",
+                "development-secret-key-32-chars-long",
+                "mizan-dev-secret-key-do-not-use-in-prod",
+            }
+            if self.secret_key.strip() in insecure_defaults or len(self.secret_key.strip()) < 32:
                 raise ValueError(
-                    "Production secret_key must be configured with a high-entropy secret (at least 16 characters)."
+                    "Production secret_key must be configured with a high-entropy secret (at least 32 characters)."
                 )
             if "*" in self.cors_origins:
                 raise ValueError("Production environment cannot allow wildcard CORS origins ('*').")

@@ -11,6 +11,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
+# Set test Prometheus scrape token before app initialization
+os.environ["PROMETHEUS_SCRAPE_TOKEN"] = "test-scrape-token-e2e-2026"
+
 from fastapi.testclient import TestClient
 from app.main import create_app
 
@@ -370,7 +373,7 @@ def test_gate3_status():
     assert res.status_code in [200, 404], f"Gate 3 status check failed: {res.status_code} {res.text}"
 
 run_test("Approvals: Gate 1 Privacy Approvals", test_gate1_status)
-run_test("Approvals: Gate 2 Evaluation Approvals", test_gate2_status)
+run_test("Approvals: Gate 2 Proposal Status", test_gate2_status)
 run_test("Approvals: Gate 3 Release Approvals", test_gate3_status)
 
 # --- 9. HARDWARE & COST ---
@@ -463,7 +466,7 @@ run_test("Customer Runtime: Readiness Probe", test_customer_runtime_ready)
 
 # --- 15. OPERATIONS CENTRE ---
 def test_ops_summary():
-    res = client.get("/api/v1/ops/metrics/summary", headers=get_auth_headers())
+    res = client.get(f"/api/v1/ops/metrics/summary?workspace_id={ws_id}", headers=get_auth_headers())
     assert res.status_code == 200, f"Ops Summary failed: {res.status_code} {res.text}"
 
 def test_ops_alerts():
@@ -479,7 +482,10 @@ def test_ops_slos():
     assert res.status_code == 200, f"List SLOs failed: {res.status_code} {res.text}"
 
 def test_ops_prometheus():
-    res = client.get("/api/v1/ops/metrics/prometheus", headers=get_auth_headers())
+    res = client.get(
+        "/api/v1/ops/metrics/prometheus",
+        headers={"Authorization": "Bearer test-scrape-token-e2e-2026"},
+    )
     assert res.status_code == 200, f"Prometheus Scrape failed: {res.status_code} {res.text}"
 
 run_test("Operations: Fleet & Metrics Summary", test_ops_summary)

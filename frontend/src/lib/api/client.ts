@@ -27,12 +27,16 @@ export function setCsrfToken(token: string | null): void {
     sessionStorage.setItem("mizan_csrf", token);
     try {
       localStorage.setItem("mizan_csrf", token);
-    } catch {}
+    } catch {
+      // Ignore storage errors in restricted contexts
+    }
   } else {
     sessionStorage.removeItem("mizan_csrf");
     try {
       localStorage.removeItem("mizan_csrf");
-    } catch {}
+    } catch {
+      // Ignore storage errors in restricted contexts
+    }
   }
 }
 
@@ -57,12 +61,16 @@ export function setSessionToken(token: string | null): void {
     sessionStorage.setItem("mizan_session_token", token);
     try {
       localStorage.setItem("mizan_session_token", token);
-    } catch {}
+    } catch {
+      // Ignore storage errors in restricted contexts
+    }
   } else {
     sessionStorage.removeItem("mizan_session_token");
     try {
       localStorage.removeItem("mizan_session_token");
-    } catch {}
+    } catch {
+      // Ignore storage errors in restricted contexts
+    }
   }
 }
 

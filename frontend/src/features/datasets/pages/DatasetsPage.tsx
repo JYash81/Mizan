@@ -100,8 +100,8 @@ export function DatasetsPage() {
 
   const datasets: Dataset[] = Array.isArray(data)
     ? data
-    : Array.isArray((data as any)?.datasets)
-    ? (data as any).datasets
+    : Array.isArray((data as { datasets?: Dataset[] })?.datasets)
+    ? (data as { datasets?: Dataset[] }).datasets ?? []
     : [];
   const filteredDatasets = datasets.filter(
     (d) =>

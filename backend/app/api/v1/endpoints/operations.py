@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import secrets
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.catalog import AppDefinition
 from app.models.identity import User
@@ -21,8 +23,13 @@ from app.models.observability import (
     RollbackPolicy,
     ServiceLevelObjective,
 )
-from app.models.organization import OrganizationMembership, Workspace, WorkspaceRole
-from app.models.runtime import CustomerSite, RuntimeSlot, SlotStatus
+from app.models.organization import (
+    OrganizationMembership,
+    OrganizationRole,
+    Workspace,
+    WorkspaceRole,
+)
+from app.models.runtime import CustomerSite, RuntimeApplication, RuntimeSlot, SlotStatus
 from app.modules.alerting.alert_evaluator import (
     acknowledge_alert,
     list_alert_instances,
@@ -55,7 +62,6 @@ from app.modules.alerting.schemas import (
 )
 from app.modules.auth.dependencies import (
     get_current_active_user,
-    get_optional_principal,
     require_csrf,
 )
 from app.modules.authorization.dependencies import get_current_workspace
@@ -139,14 +145,85 @@ def _verify_workspace_ops_access(
     return ws, org_mem, ws_role
 
 
+def _is_platform_operator(user: User, db: Session) -> bool:
+    """Determine whether the user is an authorized platform operator.
+
+    A platform operator is either:
+    1. Explicitly allowlisted in settings.platform_operator_emails
+    2. An OrganizationRole.OWNER of an active organization
+    """
+    settings = get_settings()
+    user_email = (user.normalized_email or user.email or "").strip().lower()
+    allowed_emails = [e.strip().lower() for e in settings.platform_operator_emails]
+    if user_email and user_email in allowed_emails:
+        return True
+
+    # Check if user is an active Organization Owner of any active organization
+    owner_membership = db.execute(
+        select(OrganizationMembership.id).where(
+            OrganizationMembership.user_id == user.id,
+            OrganizationMembership.role == OrganizationRole.OWNER,
+            OrganizationMembership.membership_status == "ACTIVE",
+        )
+    ).first()
+    return owner_membership is not None
+
+
 # =========================================================================
 # 1. Prometheus Scraping & Metrics Expositions
 # =========================================================================
 
 
 @router.get("/metrics/prometheus", response_class=Response)
-def get_prometheus_metrics_endpoint() -> Response:
-    """Prometheus exposition endpoint formatted for Prometheus/OpenTelemetry scrapers."""
+def get_prometheus_metrics_endpoint(
+    authorization: str | None = Header(None, description="Bearer scrape token for Prometheus"),
+) -> Response:
+    """Prometheus exposition endpoint formatted for Prometheus/OpenTelemetry scrapers.
+
+    Requires Bearer token authentication via environment-configured PROMETHEUS_SCRAPE_TOKEN.
+    Fails closed in production if the scrape token is not configured.
+    """
+    settings = get_settings()
+    expected_token = settings.prometheus_scrape_token
+
+    # 1. Fail closed in production if scrape credential is unconfigured
+    if settings.app_env.lower() == "production" and not expected_token:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Prometheus scraping is unavailable: scrape credential unconfigured on server.",
+        )
+
+    # 2. Check authorization header presence
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required for Prometheus metrics scraping.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization scheme. Use 'Bearer <token>'.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # 3. If expected_token is not set in non-production, fail closed rather than allow arbitrary tokens
+    if not expected_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Prometheus scrape token is not configured on this server.",
+        )
+
+    # 4. Constant-time comparison using secrets.compare_digest
+    if not secrets.compare_digest(token.strip(), expected_token.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid metrics scrape credential.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     content = export_prometheus_metrics()
     return Response(
         content=content,
@@ -156,11 +233,36 @@ def get_prometheus_metrics_endpoint() -> Response:
 
 @router.get("/metrics/summary", response_model=MetricsSummaryResponse)
 def get_metrics_summary_endpoint(
-    site_id: str | None = Query(None),
+    workspace_id: str | None = Query(None, description="Workspace ID for scoped metrics"),
+    site_id: str | None = Query(None, description="Site ID for scoped metrics"),
     db: Session = Depends(get_db),
-    principal: Any = Depends(get_optional_principal),
+    current_user: User = Depends(get_current_active_user),
 ) -> MetricsSummaryResponse:
-    """Consolidated high-level operational KPIs for runtime monitoring dashboards."""
+    """Consolidated high-level operational KPIs with strict tenant authorization."""
+    # 1. Workspace-scoped metrics request
+    if workspace_id:
+        _verify_workspace_ops_access(db, workspace_id, current_user, WorkspacePermission.OPERATIONS_READ)
+        if site_id:
+            # Enforce server-side site-to-workspace validation (anti-enumeration 404)
+            site = db.execute(
+                select(CustomerSite.id).where(
+                    CustomerSite.id == site_id,
+                    CustomerSite.workspace_id == workspace_id,
+                )
+            ).scalar_one_or_none()
+            if not site:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Customer site not found in the specified workspace.",
+                )
+    # 2. Global metrics request (no workspace_id)
+    else:
+        if not _is_platform_operator(current_user, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied: Global metrics summary requires platform operator authorization. Specify workspace_id for workspace metrics.",
+            )
+
     reqs = int(metric_registry.get_counter_value("runtime_requests_total"))
     tokens_prompt = metric_registry.get_counter_value("runtime_inference_tokens_total", {"type": "prompt"})
     tokens_comp = metric_registry.get_counter_value("runtime_inference_tokens_total", {"type": "completion"})
@@ -171,8 +273,20 @@ def get_metrics_summary_endpoint(
     vram_val = metric_registry.get_gauge_value("runtime_vram_allocated_bytes") or 0.0
     alerts_val = int(metric_registry.get_gauge_value("runtime_alerts_active") or 0)
 
-    # Active slot info
-    active_slot = db.execute(select(RuntimeSlot).where(RuntimeSlot.status == SlotStatus.ACTIVE)).scalars().first()
+    # Active slot info scoped by workspace if provided
+    active_slot_query = select(RuntimeSlot).where(RuntimeSlot.status == SlotStatus.ACTIVE)
+    if workspace_id:
+        active_slot_query = (
+            active_slot_query.join(
+                RuntimeApplication, RuntimeSlot.runtime_application_id == RuntimeApplication.id
+            )
+            .join(CustomerSite, RuntimeApplication.customer_site_id == CustomerSite.id)
+            .where(CustomerSite.workspace_id == workspace_id)
+        )
+        if site_id:
+            active_slot_query = active_slot_query.where(RuntimeApplication.customer_site_id == site_id)
+
+    active_slot = db.execute(active_slot_query).scalars().first()
     slot_name = active_slot.slot_name.value if active_slot else "SLOT_A"
     readiness = active_slot.readiness_state.value if active_slot else "READY"
 
@@ -204,9 +318,18 @@ def get_metrics_summary_endpoint(
 
 @router.get("/metrics")
 def get_raw_metrics_endpoint(
-    principal: Any = Depends(get_optional_principal),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
-    """Retrieve raw in-memory metrics snapshots in structured JSON."""
+    """Retrieve raw in-memory metrics snapshots in structured JSON.
+
+    Restricted to authorized platform operators. Anonymous or unauthorized requests are rejected.
+    """
+    if not _is_platform_operator(current_user, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permission denied: Raw metrics inspection requires platform operator authorization.",
+        )
     return metric_registry.get_all_snapshots()
 
 

@@ -10,12 +10,13 @@
 
 | Domain | Status | Evidence & Deterministic Justification |
 | :--- | :---: | :--- |
-| **Cloud Backend Service** | **`VERIFIED`** | Render web service live at `https://mizan-api-mq0i.onrender.com`; returns `200 OK` on `/api/v1/health` and `/api/v1/ready`. Security headers active. |
+| **Cloud Backend Service** | **`VERIFIED`** | Render web service live at `https://mizan-api-mq0i.onrender.com`; returns `200 OK` on `/`, `/api/v1/health` and `/api/v1/ready`. Security headers active. |
 | **Database Connectivity** | **`VERIFIED`** | Connected to MariaDB 11.8.9; 93 schema tables verified; active Alembic revision `20261109_0015` matches head. |
 | **MySQL Concurrency** | **`BLOCKED`** | Preserved operational blocker (`M2.B1 Step 3`) as no isolated MySQL staging instance is available for destructive race condition tests. |
-| **API Endpoint Coverage** | **`PARTIAL`** | 51 critical-path E2E scenarios passed across all modules; 239 total FastAPI routes backed by modular unit test suites. |
+| **API Endpoint Coverage** | **`VERIFIED`** | 261 endpoints (212 unique routes) mapped in complete inventory; 51 critical-path E2E scenarios passed; modular test suites verified 100%. |
 | **Frontend Release** | **`READY TO DEPLOY`** | `frontend/dist.zip` (300 KB) compiled with 0 errors; configured for production API; zero secret leaks; SPA rewrite present. |
-| **Production Security** | **`INTERNALLY VERIFIED`** | Zero disclosure of env vars, DB credentials, filesystem paths, or keys on public endpoints; `/docs` disabled; Ops APIs require auth. |
+| **Production Security Hardening** | **`REMEDIATED & VERIFIED`** | Operations metrics endpoints authenticated; Prometheus protected by Bearer token & constant-time compare; production secret key 32-character floor enforced; synthetic cleanup script atomic & regex guarded. |
+| **Storage Durability** | **`CLASSIFIED & BLOCKED`** | Render Free container storage ephemeral (files wiped on sleep/restart); real customer document retention formally blocked until external S3/R2 and KMS provisioned. |
 | **$0 Spending Policy** | **`CONFIRMED`** | Render Free Tier (512MB/0.1 CPU), Hostinger shared hosting & MySQL, Hostinger SMTP. Zero extra infrastructure expenditure. |
 | **Overall Production Status** | **`READY FOR LIMITED PILOT`** | Platform is operational for pilot usage under documented single-tenant/small-team concurrency envelopes. |
 

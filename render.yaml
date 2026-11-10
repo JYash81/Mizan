@@ -40,6 +40,10 @@ services:
         value: llmguru@hennt.in
       - key: SMTP_USE_SSL
         value: "true"
+      - key: MAIL_RELAY_URL
+        value: https://llmguru.hennt.in/mail-relay.php
+      - key: MAIL_RELAY_SECRET
+        value: mizan-secure-mail-relay-key-2026-safe
       - key: BACKUP_PASSPHRASE
         value: mizan-production-disaster-recovery-key-passphrase-2026-safe
       - key: PLATFORM_OPERATOR_EMAILS

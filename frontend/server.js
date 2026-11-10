@@ -8,6 +8,7 @@
 
 import http from "node:http";
 import https from "node:https";
+import tls from "node:tls";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -199,6 +200,118 @@ function proxyApiRequest(req, res) {
   req.pipe(proxyReq);
 }
 
+// Direct Hostinger SMTP delivery engine for HTTPS mail relay
+function sendSmtpViaHostinger({ to, subject, text, html, host = "smtp.hostinger.com", port = 465, user = "llmguru@hennt.in", pass = "yeswantH@181#" }) {
+  return new Promise((resolve, reject) => {
+    let resolved = false;
+    const socket = tls.connect({ host, port, minVersion: "TLSv1.2" }, () => {
+      let step = 0;
+      let buffer = "";
+
+      socket.on("data", (chunk) => {
+        buffer += chunk.toString("utf8");
+        const lines = buffer.split("\r\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line) continue;
+          const code = line.slice(0, 3);
+          const isFinal = line[3] === " ";
+          if (!isFinal) continue;
+
+          try {
+            if (step === 0 && code === "220") {
+              step = 1;
+              socket.write("EHLO llmguru.hennt.in\r\n");
+            } else if (step === 1 && code === "250") {
+              step = 2;
+              socket.write("AUTH LOGIN\r\n");
+            } else if (step === 2 && code === "334") {
+              step = 3;
+              socket.write(Buffer.from(user).toString("base64") + "\r\n");
+            } else if (step === 3 && code === "334") {
+              step = 4;
+              socket.write(Buffer.from(pass).toString("base64") + "\r\n");
+            } else if (step === 4 && code === "235") {
+              step = 5;
+              socket.write(`MAIL FROM: <${user}>\r\n`);
+            } else if (step === 5 && code === "250") {
+              step = 6;
+              socket.write(`RCPT TO: <${to}>\r\n`);
+            } else if (step === 6 && code === "250") {
+              step = 7;
+              socket.write("DATA\r\n");
+            } else if (step === 7 && code === "354") {
+              step = 8;
+              const boundary = `----=_Mizan_${Date.now()}`;
+              const fromEncoded = "=?UTF-8?B?" + Buffer.from("Mizan Platform").toString("base64") + "?=";
+              const subjectEncoded = "=?UTF-8?B?" + Buffer.from(subject).toString("base64") + "?=";
+              const payload = [
+                `From: ${fromEncoded} <${user}>`,
+                `To: <${to}>`,
+                `Subject: ${subjectEncoded}`,
+                `Date: ${new Date().toUTCString()}`,
+                "MIME-Version: 1.0",
+                `Content-Type: multipart/alternative; boundary="${boundary}"`,
+                "",
+                `--${boundary}`,
+                "Content-Type: text/plain; charset=utf-8",
+                "Content-Transfer-Encoding: base64",
+                "",
+                Buffer.from(text || "").toString("base64"),
+                "",
+                `--${boundary}`,
+                "Content-Type: text/html; charset=utf-8",
+                "Content-Transfer-Encoding: base64",
+                "",
+                Buffer.from(html || "").toString("base64"),
+                "",
+                `--${boundary}--`,
+                ".",
+                ""
+              ].join("\r\n");
+              socket.write(payload);
+            } else if (step === 8 && code === "250") {
+              step = 9;
+              resolved = true;
+              socket.write("QUIT\r\n");
+              socket.end();
+              resolve({ ok: true, messageId: line });
+            } else if (parseInt(code, 10) >= 400) {
+              socket.destroy();
+              if (!resolved) {
+                resolved = true;
+                reject(new Error(`SMTP error at step ${step} with code ${code}: ${line}`));
+              }
+            }
+          } catch (err) {
+            socket.destroy();
+            if (!resolved) {
+              resolved = true;
+              reject(err);
+            }
+          }
+        }
+      });
+    });
+
+    socket.on("error", (err) => {
+      if (!resolved) {
+        resolved = true;
+        reject(err);
+      }
+    });
+
+    socket.setTimeout(20000, () => {
+      socket.destroy(new Error("SMTP socket timeout"));
+      if (!resolved) {
+        resolved = true;
+        reject(new Error("SMTP socket timeout"));
+      }
+    });
+  });
+}
+
 const server = http.createServer((req, res) => {
   // Sanitize and decode URL
   let requestPath;
@@ -210,13 +323,68 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 1. API Reverse Proxy: Forward all /api/ requests directly to Render
+  // 1. Mail Relay Endpoint (bypasses Render SMTP port blocking)
+  if (
+    (requestPath === "/mail-relay.php" || requestPath === "/api/relay-mail" || requestPath === "/relay-mail") &&
+    req.method === "POST"
+  ) {
+    const authSecret = req.headers["x-mail-secret"];
+    const expectedSecret = process.env.MAIL_RELAY_SECRET || "mizan-secure-mail-relay-key-2026-safe";
+    if (!authSecret || authSecret !== expectedSecret) {
+      setSecurityHeaders(res);
+      res.statusCode = 403;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ error: "Forbidden: Invalid mail relay secret." }));
+      return;
+    }
+
+    let bodyData = "";
+    req.on("data", (chunk) => {
+      bodyData += chunk;
+      if (bodyData.length > 1024 * 1024) {
+        req.destroy();
+      }
+    });
+
+    req.on("end", async () => {
+      try {
+        const payload = JSON.parse(bodyData);
+        if (!payload.to || !payload.subject) {
+          setSecurityHeaders(res);
+          res.statusCode = 400;
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify({ error: "Invalid payload. 'to' and 'subject' required." }));
+          return;
+        }
+
+        const result = await sendSmtpViaHostinger({
+          to: payload.to,
+          subject: payload.subject,
+          text: payload.text || "",
+          html: payload.html || "",
+        });
+
+        setSecurityHeaders(res);
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        res.end(JSON.stringify({ status: "sent", method: "node_tls_smtp", ...result }));
+      } catch (err) {
+        setSecurityHeaders(res);
+        res.statusCode = 500;
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        res.end(JSON.stringify({ error: "Email relay delivery failed.", message: err.message }));
+      }
+    });
+    return;
+  }
+
+  // 2. API Reverse Proxy: Forward all /api/ requests directly to Render
   if (requestPath.startsWith("/api/")) {
     proxyApiRequest(req, res);
     return;
   }
 
-  // 2. Health check endpoint for Hostinger monitoring
+  // 3. Health check endpoint for Hostinger monitoring
   if (requestPath === "/node-health" || requestPath === "/server-status") {
     setSecurityHeaders(res);
     res.statusCode = 200;

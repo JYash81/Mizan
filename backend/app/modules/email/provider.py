@@ -198,6 +198,8 @@ class SMTPEmailProvider(EmailProvider):
         self.use_ssl = settings.smtp_use_ssl
         self.use_tls = settings.smtp_use_tls
         self.frontend_url = settings.frontend_url.rstrip("/")
+        self.mail_relay_url = getattr(settings, "mail_relay_url", None) or f"{self.frontend_url}/mail-relay.php"
+        self.mail_relay_secret = getattr(settings, "mail_relay_secret", "mizan-secure-mail-relay-key-2026-safe")
         self.outbox: list[SentEmail] = []
 
     def _deliver(
@@ -219,6 +221,47 @@ class SMTPEmailProvider(EmailProvider):
         self.outbox.append(sent_record)
         _dev_provider.outbox.append(sent_record)
 
+        # Log action URL (verification or reset link) so it is visible in application logs
+        action_url = context.get("action_url")
+        if action_url:
+            logger.info("[EMAIL_ACTION_LINK] To: %s | Action: %s", to_email, action_url)
+
+        # 1. Primary path for cloud deployment: HTTPS Mail Relay over Port 443
+        # Render Free blocks outbound SMTP ports (25, 465, 587) at its egress firewall,
+        # but allows Port 443 HTTPS. Hostinger accepts the HTTPS relay request and sends mail locally.
+        if self.mail_relay_url and (self.mail_relay_url.startswith("https://") or "relay" in self.mail_relay_url):
+            try:
+                import json
+                import urllib.request
+
+                payload_bytes = json.dumps({
+                    "to": to_email,
+                    "subject": subject,
+                    "text": text_content,
+                    "html": html_content,
+                }).encode("utf-8")
+
+                req = urllib.request.Request(
+                    self.mail_relay_url,
+                    data=payload_bytes,
+                    headers={
+                        "Content-Type": "application/json",
+                        "X-Mail-Secret": self.mail_relay_secret,
+                        "User-Agent": "Mizan-Backend-Relay/1.0",
+                    },
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    if resp.status == 200:
+                        logger.info("Successfully dispatched email via HTTPS Mail Relay to %s (subject: %s)", to_email, subject)
+                        return True
+            except Exception as relay_err:
+                logger.warning(
+                    "HTTPS Mail Relay attempt to %s failed (%s); falling back to direct SMTP",
+                    self.mail_relay_url,
+                    relay_err,
+                )
+
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = formataddr((self.from_name, self.from_email))
@@ -227,20 +270,21 @@ class SMTPEmailProvider(EmailProvider):
         msg.attach(MIMEText(text_content, "plain", "utf-8"))
         msg.attach(MIMEText(html_content, "html", "utf-8"))
 
+        # 2. Secondary path: Direct SMTP (used in local development or unblocked networks)
         try:
             if self.use_ssl:
-                with smtplib.SMTP_SSL(self.host, self.port, timeout=20) as server:
+                with smtplib.SMTP_SSL(self.host, self.port, timeout=8) as server:
                     if self.user and self.password:
                         server.login(self.user, self.password)
                     server.send_message(msg)
             else:
-                with smtplib.SMTP(self.host, self.port, timeout=20) as server:
+                with smtplib.SMTP(self.host, self.port, timeout=8) as server:
                     if self.use_tls:
                         server.starttls()
                     if self.user and self.password:
                         server.login(self.user, self.password)
                     server.send_message(msg)
-            logger.info("Successfully dispatched email via SMTP to %s (subject: %s)", to_email, subject)
+            logger.info("Successfully dispatched email via direct SMTP to %s (subject: %s)", to_email, subject)
             return True
         except Exception as exc:
             logger.error("Failed to deliver email via SMTP to %s: %s", to_email, exc, exc_info=True)

@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     smtp_use_ssl: bool = True
     smtp_use_tls: bool = False
     frontend_url: str = "http://localhost:5173"
+    # HTTPS Mail Relay Configuration (for cloud environments where outbound SMTP ports are blocked)
+    mail_relay_url: str | None = None
+    mail_relay_secret: str = "mizan-secure-mail-relay-key-2026-safe"
     # Dedicated Prometheus Scrape Token for authenticated monitoring scrapers
     prometheus_scrape_token: str | None = None
     # Platform Operator / Super-admin allowlist for cross-tenant operations access

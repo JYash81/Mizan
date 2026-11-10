@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "start": "node server.js",
+    "serve": "node server.js",
     "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc -b"

@@ -6,8 +6,9 @@ import logging
 from functools import lru_cache
 
 import spacy
-from presidio_analyzer import AnalyzerEngine
+from presidio_analyzer import AnalyzerEngine, PatternRecognizer
 from presidio_analyzer.nlp_engine import SpacyNlpEngine
+from presidio_analyzer.predefined_recognizers.generic.email_recognizer import EmailRecognizer
 
 from app.modules.masking.recognizers.emirates_id import EmiratesIdRecognizer
 from app.modules.masking.recognizers.uae_iban import UaeIbanRecognizer
@@ -51,10 +52,22 @@ def get_analyzer_engine() -> AnalyzerEngine:
         supported_languages=["en", "ar"],
     )
 
-    # Register custom UAE recognizers for both English and Arabic
+    # Register custom UAE recognizers for both English and Arabic, plus a syntax-only
+    # email fallback. The default EmailRecognizer validates domains with a public suffix
+    # list, which can reject reserved synthetic domains or newly introduced TLDs. The
+    # pattern still requires a conventional complete email shape and never stores raw text.
     for lang in ["en", "ar"]:
         engine.registry.add_recognizer(EmiratesIdRecognizer(supported_language=lang))
         engine.registry.add_recognizer(UaeIbanRecognizer(supported_language=lang))
         engine.registry.add_recognizer(UaePhoneRecognizer(supported_language=lang))
+        engine.registry.add_recognizer(
+            PatternRecognizer(
+                supported_entity="EMAIL_ADDRESS",
+                name="MizanEmailSyntaxRecognizer",
+                patterns=EmailRecognizer.PATTERNS,
+                context=EmailRecognizer.CONTEXT,
+                supported_language=lang,
+            )
+        )
 
     return engine

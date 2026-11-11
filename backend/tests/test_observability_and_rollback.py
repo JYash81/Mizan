@@ -376,6 +376,7 @@ def test_setup(db: Session) -> dict:
     # Authenticate session
     auth_session = session_service.create_session(db, user_id=user.id)
     token = auth_session.session_token
+    db.commit()
 
     return {
         "user": user,
@@ -397,8 +398,16 @@ def test_setup(db: Session) -> dict:
 # =========================================================================
 
 
-def test_scenario_a_metrics_collection_and_prometheus_export(client: TestClient, test_setup: dict) -> None:
+def test_scenario_a_metrics_collection_and_prometheus_export(
+    client: TestClient, test_setup: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Verify in-memory metric recording, cardinality budgeting, and standard Prometheus text exposition."""
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    scrape_token = "test-scrape-token-valid-entropy-32chars"
+    monkeypatch.setattr(settings, "prometheus_scrape_token", scrape_token)
+
     metric_registry.reset()
 
     # Record operational telemetry
@@ -457,13 +466,19 @@ def test_scenario_a_metrics_collection_and_prometheus_export(client: TestClient,
     assert "runtime_cpu_usage_percent" in prom_text
 
     # 3. Test HTTP Prometheus scraper endpoint
-    resp = client.get("/api/v1/ops/metrics/prometheus")
+    resp = client.get(
+        "/api/v1/ops/metrics/prometheus",
+        headers={"Authorization": f"Bearer {scrape_token}"},
+    )
     assert resp.status_code == 200
     assert "text/plain" in resp.headers["content-type"]
     assert "runtime_requests_total" in resp.text
 
     # 4. Test HTTP Metrics Summary endpoint
-    summary_resp = client.get("/api/v1/ops/metrics/summary")
+    summary_resp = client.get(
+        f"/api/v1/ops/metrics/summary?workspace_id={test_setup['workspace'].id}",
+        headers={"Authorization": f"Bearer {test_setup['token']}"},
+    )
     assert summary_resp.status_code == 200
     data = summary_resp.json()
     assert data["requests_total"] == 2
@@ -820,7 +835,7 @@ def test_scenario_g_post_activation_regression_detection(db: Session, test_setup
     runtime_app = test_setup["runtime_app"]
     ws_id = test_setup["workspace"].id
 
-    policy_read = get_or_create_rollback_policy(db, ws_id, runtime_app.id)
+    policy_read = get_or_create_rollback_policy(db, ws_id, runtime_app.id, actor_id=test_setup["user"].id)
     from app.models.observability import RollbackPolicy
     policy = db.execute(select(RollbackPolicy).where(RollbackPolicy.id == policy_read.id)).scalar_one()
 
@@ -870,7 +885,7 @@ def test_scenario_h_automated_rollback_and_anti_flapping(db: Session, test_setup
     user_id = test_setup["user"].id
 
     # Configure policy to AUTOMATIC
-    policy_read = get_or_create_rollback_policy(db, ws_id, runtime_app.id)
+    policy_read = get_or_create_rollback_policy(db, ws_id, runtime_app.id, actor_id=test_setup["user"].id)
     update_rollback_policy(
         db,
         policy_read.id,

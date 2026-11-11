@@ -26,6 +26,17 @@ def get_or_create_rollback_policy(
 
     if not policy:
         now = datetime.now(UTC)
+        effective_actor_id = actor_id
+        if not effective_actor_id:
+            from app.models.organization import Workspace
+            ws = db.execute(select(Workspace).where(Workspace.id == workspace_id)).scalar_one_or_none()
+            if ws and ws.created_by:
+                effective_actor_id = ws.created_by
+            else:
+                from app.models.identity import User
+                first_user_id = db.execute(select(User.id)).scalars().first()
+                effective_actor_id = first_user_id or "system"
+
         policy = RollbackPolicy(
             workspace_id=workspace_id,
             runtime_application_id=runtime_application_id,
@@ -37,7 +48,7 @@ def get_or_create_rollback_policy(
             max_automatic_attempts_per_release=1,
             require_golden_test_pass=True,
             require_gate3_active=True,
-            created_by=actor_id or "system",
+            created_by=effective_actor_id,
             created_at=now,
             updated_at=now,
         )

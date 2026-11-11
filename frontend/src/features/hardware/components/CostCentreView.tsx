@@ -134,7 +134,7 @@ export const CostCentreView: React.FC<Props> = ({ workspaceId, catalog }) => {
                 type="number"
                 value={durationHours}
                 onChange={(e) => setDurationHours(Math.max(0.1, parseFloat(e.target.value) || 0.1))}
-                step="0.5"
+                step="0.1"
                 min="0.1"
                 max="1000"
                 className="w-full px-3 py-2 rounded-lg bg-neutral-950 border border-neutral-800 text-neutral-200 focus:outline-none focus:border-emerald-500"

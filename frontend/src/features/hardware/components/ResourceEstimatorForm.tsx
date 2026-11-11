@@ -126,7 +126,7 @@ export const ResourceEstimatorForm: React.FC<Props> = ({
               value={paramCount}
               onChange={(e) => setParamCount(parseFloat(e.target.value) || 0)}
               className="w-full px-3 py-2 rounded-lg bg-neutral-950 border border-neutral-800 text-neutral-200 focus:outline-none focus:border-emerald-500"
-              step="100"
+              step="10"
               min="10"
               required
             />

@@ -14,6 +14,7 @@ coverage/
 storage/
 backend/storage/
 storage/keys/
+uploads/
 *.key
 *.pub
 *.db

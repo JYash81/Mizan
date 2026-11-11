@@ -318,4 +318,37 @@ describe("Hardware & Gate 2 Centre Frontend Page", () => {
       expect(screen.getByText("APPROVED")).toBeInTheDocument();
     });
   });
+
+  it("keeps the estimator default and every built-in model preset valid", async () => {
+    renderComponent();
+    fireEvent.click(screen.getByRole("button", { name: /Resource Estimator/i }));
+
+    const defaultParameterInput = (await screen.findByDisplayValue("8000")) as HTMLInputElement;
+    expect(defaultParameterInput).toHaveAttribute("step", "10");
+    expect(defaultParameterInput.checkValidity()).toBe(true);
+
+    const presets = [
+      { label: /1B \(e\.g\. TinyLlama\)/i, value: "1100" },
+      { label: /3\.8B \(e\.g\. Phi-3\)/i, value: "3800" },
+      { label: /7B \(e\.g\. Mistral\)/i, value: "7000" },
+      { label: /8B \(e\.g\. Llama-3\)/i, value: "8000" },
+      { label: /70B \(e\.g\. Llama-3 70B\)/i, value: "70000" },
+    ];
+
+    for (const preset of presets) {
+      fireEvent.click(screen.getByRole("button", { name: preset.label }));
+      const parameterInput = (await screen.findByDisplayValue(preset.value)) as HTMLInputElement;
+      expect(parameterInput.checkValidity()).toBe(true);
+    }
+  });
+
+  it("keeps the default two-hour cost duration valid under native step validation", async () => {
+    renderComponent();
+    fireEvent.click(screen.getByRole("button", { name: /Cost & Pricing/i }));
+
+    const durationInput = (await screen.findByDisplayValue("2")) as HTMLInputElement;
+    expect(durationInput).toHaveAttribute("min", "0.1");
+    expect(durationInput).toHaveAttribute("step", "0.1");
+    expect(durationInput.checkValidity()).toBe(true);
+  });
 });

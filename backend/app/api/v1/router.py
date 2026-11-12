@@ -23,6 +23,7 @@ from app.api.v1.endpoints.operations import router as operations_router
 from app.api.v1.endpoints.organizations import router as org_router
 from app.api.v1.endpoints.rag import router as rag_router
 from app.api.v1.endpoints.recommendations import router as recommendations_router
+from app.api.v1.endpoints.sentinel import router as sentinel_router
 from app.api.v1.endpoints.site_agent import router as site_agent_router
 from app.api.v1.endpoints.sites import router as sites_router
 from app.api.v1.endpoints.system import router as system_router
@@ -54,3 +55,4 @@ router.include_router(sites_router)
 router.include_router(site_agent_router)
 router.include_router(customer_runtime_router)
 router.include_router(operations_router)
+router.include_router(sentinel_router)

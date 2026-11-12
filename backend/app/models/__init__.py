@@ -198,6 +198,22 @@ from app.models.runtime import (
     SlotName,
     SlotStatus,
 )
+from app.models.sentinel import (
+    ContainmentAction,
+    ContainmentTargetType,
+    ExecutedNonce,
+    IncidentRegulatoryClock,
+    OrderExecutionStatus,
+    SealedEvidenceRecord,
+    SealedEvidenceStatus,
+    SentinelContainmentOrder,
+    Sev1RecoveryRecord,
+    SignedVersionFloor,
+    SupportAccessRequest,
+    SupportAccessScope,
+    SupportAccessStatus,
+    SupportSessionLog,
+)
 
 __all__ = [
     "AppDefinition",
@@ -375,4 +391,18 @@ __all__ = [
     "ServiceLevelObjective",
     "SliSnapshot",
     "TelemetryConfiguration",
+    "ContainmentAction",
+    "ContainmentTargetType",
+    "ExecutedNonce",
+    "IncidentRegulatoryClock",
+    "OrderExecutionStatus",
+    "SealedEvidenceRecord",
+    "SealedEvidenceStatus",
+    "SentinelContainmentOrder",
+    "Sev1RecoveryRecord",
+    "SignedVersionFloor",
+    "SupportAccessRequest",
+    "SupportAccessScope",
+    "SupportAccessStatus",
+    "SupportSessionLog",
 ]
